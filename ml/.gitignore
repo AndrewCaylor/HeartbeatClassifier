@@ -1,0 +1,5 @@
+*model*
+dataset/*
+export/*
+*.tar.gz
+sagemakerMetrics.txt
