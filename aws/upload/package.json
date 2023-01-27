@@ -1,0 +1,19 @@
+{
+  "name": "aws",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "tsc && node build/index.js"
+  },
+  "author": "",
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.1.0",
+    "aws-sdk": "^2.1283.0",
+    "axios": "^1.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.0",
+    "typescript": "^4.8.4"
+  }
+}
