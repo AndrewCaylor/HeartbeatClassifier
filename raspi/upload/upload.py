@@ -34,9 +34,10 @@ def upload(audioData, ecgData, patientID, email, apiKey):
     
     print("Classificaiton results:")
     print(x.text)
+    return x.text
 
 # Converts the CSV file to an array buffer of Float32
-def csvEncode(path):
+def encodeCSV(path):
     with open(path) as fp:
         lines = fp.readlines()
     
@@ -47,8 +48,14 @@ def csvEncode(path):
     arrbytes = f32arr.tobytes()
     
     return arrbytes
-        
-with open("beep.wav", "rb") as f:
-    audio = f.read()
-    # andrewc01@vt.edu is the only email that works because we are not verified
-    upload(audio,csvEncode("ecg.csv"),"drew","andrewc01@vt.edu","gokies")
+
+def encodeWAV(path):
+    with open(path, "rb") as f:
+        audio = f.read()
+        return audio
+
+if __name__ == "__main__":
+    with open("beep.wav", "rb") as f:
+        audio = f.read()
+        # andrewc01@vt.edu is the only email that works because we are not verified
+        upload(audio,csvEncode("ecg.csv"),"drew","andrewc01@vt.edu","gokies")
