@@ -1,11 +1,16 @@
 Configure Ras Pi to run main on startip:
 
 1. create shell script in documents: run.sh
-2. add the following commands: 
-cd /Desktop/HeartBeatClassifier/raspi
-python main.py
-3. save the file
-4. run the command: sudo nano /etc/rc.local
-5. edit the file and add the command: sh /home/<USER>/Documets/run.sh
+2. add the following commands:  
+cd ~/Desktop/HeartBeatClassifier/raspi  
+python3 main.py  
+3. save the file, change to executable: 
+chmod +x run.sh  
+4. run the command: 
+sudo nano /etc/xdg/autostart/display.desktop  
+5. edit the file and add the following text:
+[Desktop Entry]  
+Name=HearCondPred  
+Exec=sh /home/<USER>/Documents/run.sh
 
-now main.py should run on startup :)
+now main.py *should* run on startup :)
