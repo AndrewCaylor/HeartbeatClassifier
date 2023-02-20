@@ -58,4 +58,4 @@ if __name__ == "__main__":
     with open("beep.wav", "rb") as f:
         audio = f.read()
         # andrewc01@vt.edu is the only email that works because we are not verified
-        upload(audio,csvEncode("ecg.csv"),"drew","andrewc01@vt.edu","gokies")
+        upload(audio,encodeCSV("ecg.csv"),"drew","andrewc01@vt.edu","gokies")
