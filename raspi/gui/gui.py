@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 import os.path as Path
-from record import recordWAV, recordECG
+from record import recordWAV, recordECG, filterWAV
 from upload import encodeCSV, encodeWAV, upload
 import time
 
@@ -35,13 +35,17 @@ def gui():
         recordTextVar.set("Recording...")
         window.update()
         
-        wavpath = recordWAV()
+        wavPath = "record.wav"
+        filteredPath = "filtered.wav"
+        
+        successWav = recordWAV(wavPath)
+        successFilter = filterWAV(filteredPath, wavPath)
         ecgpath = recordECG()
         
         recordTextVar.set("Uploading...")
         window.update()
         
-        wavData = encodeWAV(wavpath)
+        wavData = encodeWAV(filteredPath)
         ecgData = encodeCSV(ecgpath)
         
         result = upload(wavData, ecgData, PATIENT_ID, EMAIL, "gokies")
@@ -156,6 +160,3 @@ def gui():
     transitionState("menu")
     # do the thing
     window.mainloop()
-
-if(__name__ == "__main__"):
-    gui()
