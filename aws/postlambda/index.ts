@@ -5,7 +5,7 @@ import { Context, APIGatewayEvent, APIGatewayProxyResult, } from 'aws-lambda';
 AWS.config.update({ region: 'us-east-1' });
 const s3 = new AWS.S3({ apiVersion: '2006-03-01', region: 'us-east-1' });
 const ses = new AWS.SES({ apiVersion: '2010-12-01' });
-const lambda = new AWS.Lambda({region: 'us-east-1'});
+const lambda = new AWS.Lambda({ region: 'us-east-1' });
 const sage = new AWS.SageMakerRuntime();
 
 function getEmailParams(destEmail: string, patientID: string, startTime: string) {
@@ -43,6 +43,13 @@ function createAccessLink(patientID: string, startTime: string) {
   return `${baseURL}/index.html?patientID=${patientID}&startTime=${startTime}&password=gokies`;
 }
 
+enum AuscultationPt {
+  aortic = "aortic",
+  mitral = "mitral",
+  tricuspid = "tricuspid",
+  pulmonic = "pulmonic",
+}
+
 interface PostParams {
   audio: string;
   ecg: string;
@@ -50,6 +57,8 @@ interface PostParams {
   destEmail: string;
   startTime: number;
   password: string;
+  sampleRate: number;
+  stethoscopeLocation: AuscultationPt;
 }
 /**
  * 
@@ -72,14 +81,14 @@ function formatArr(arr: number[]) {
 async function invokeSage(beats: number[][]) {
 
   const data = []
-  for (const beat of beats){
+  for (const beat of beats) {
     const formattedBeat = formatArr(beat.slice(0, 186))
     data.push(formattedBeat)
   }
-  
+
   const params = {
     Body: JSON.stringify(data),
-    EndpointName: 'pleasework4', 
+    EndpointName: 'pleasework4',
     ContentType: 'application/json',
     Accept: 'application/json',
   }
@@ -92,7 +101,7 @@ async function invokeSage(beats: number[][]) {
 }
 
 function buffToFloat32(buff: Buffer) {
-    // reads each of the 4 byte floats from the buffer
+  // reads each of the 4 byte floats from the buffer
   const float32 = new Float32Array(buff.byteLength / 4);
   for (let i = 0; i < float32.length; i++) {
     float32[i] = buff.readFloatLE(i * 4);
@@ -142,8 +151,13 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   }).promise();
 
   const ecgArr = Array.prototype.slice.call(ecgFloat32) as number[];
-  const predRes = invokeSage(segmentHeartbeat(ecgArr));
 
+  // calculate the minimum distance between heartbeats
+  // 250BPM = 4.16Hz
+  const minDist = Math.round(body.sampleRate / 4.16); 
+  const heartbeats = segmentHeartbeat(ecgArr, minDist, .7);
+
+  const predRes = invokeSage(heartbeats);
 
   // wait for all promises to resolve
   const results = await Promise.all([emailRes, audRes, ecgRes, metaRes, predRes]);
@@ -157,6 +171,62 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   return response;
 };
 
-function segmentHeartbeat(beatsArr: number[]){
-  return [beatsArr];
+function segmentHeartbeat(beatsArr: number[], mindist: number, threshpct = 0.7): number[][] {
+  let nums = beatsArr;
+  let globalmax = Math.max(...nums);
+
+  // find peaks in nums that are above thereshold
+  let maxinds = [];
+  for (let i = 1; i < nums.length - 1; i++) {
+    // check for local max
+    if (nums[i] > nums[i - 1] && nums[i] > nums[i + 1]) {
+      // check if above threshold
+      if (nums[i] > globalmax * threshpct) {
+        maxinds.push(i);
+      }
+    }
+  }
+
+  if (maxinds.length > 0) {
+    // sort localmaxinds by size
+    maxinds.sort((a, b) => nums[b] - nums[a]);
+
+    // remove peaks that are too close
+    for (let i = 0; i < maxinds.length; i++) {
+      let peakind = maxinds[i];
+      // remove peaks that are too close
+      for (let j = i + 1; j < maxinds.length; j++) {
+        if (Math.abs(maxinds[j] - peakind) < mindist) {
+          maxinds.splice(j, 1);
+          j--;
+        }
+      }
+    }
+  }
+  else {
+    // no peaks found
+    throw new Error("No peaks found");
+  }
+
+  // segment based on beats
+
+  const beats = [];
+  for (let i = 1; i < maxinds.length-1; i++) {
+    const diff = maxinds[i+1] - maxinds[i-1];
+    const start = Math.round(maxinds[i] - diff/4);
+    const end = Math.round(maxinds[i] + diff/4);
+
+    beats.push(subSample(nums.slice(start, end), 186));
+  }
+
+  return beats;
+}
+
+function subSample(arr: number[], newSize: number) {
+  const newArr = [];
+  const sizeRatio = arr.length / newSize;
+  for (let i = 0; i < newSize; i++) {
+    newArr.push(arr[Math.round(i * sizeRatio)]);
+  }
+  return newArr
 }
