@@ -59,6 +59,7 @@ interface PostParams {
   password: string;
   sampleRate: number;
   stethoscopeLocation: AuscultationPt;
+  sendEmail: boolean;
 }
 /**
  * 
@@ -108,71 +109,15 @@ function buffToFloat32(buff: Buffer) {
   }
   return float32;
 }
-
-export const handler = async (event: APIGatewayEvent, context: Context): Promise<APIGatewayProxyResult> => {
-  const bodyBuff = Buffer.from(event.body, 'base64');
-  const bodyStr = bodyBuff.toString('utf8');
-  const body = JSON.parse(bodyStr) as PostParams;
-  const audioBuf = Buffer.from(body.audio, 'base64');
-  const ecgBuf = Buffer.from(body.ecg, 'base64');
-
-  const ecgFloat32 = buffToFloat32(ecgBuf);
-  // join the floats into a string
-  const ecgCsv = ecgFloat32.join('\n');
-
-  const sesParams = getEmailParams(body.destEmail, body.patientID, body.startTime.toString());
-  const emailRes = ses.sendEmail(sesParams).promise();
-
-  const audRes = s3.putObject({
-    Bucket: "heartmonitor-audiotest",
-    Key: `${body.patientID}${body.startTime}AUDIO.wav`,
-    Body: audioBuf,
-    ContentType: "audio/x-wav"
-  }).promise();
-
-  const ecgRes = s3.putObject({
-    Bucket: "heartmonitor-audiotest",
-    Key: `${body.patientID}${body.startTime}ECG.csv`,
-    Body: ecgCsv,
-    ContentType: "text/csv"
-  }).promise();
-
-  const metadata = {
-    patientID: body.patientID,
-    startTime: body.startTime,
-    destEmail: body.destEmail,
-  };
-
-  const metaRes = s3.putObject({
-    Bucket: "heartmonitor-audiotest",
-    Key: `${body.patientID}${body.startTime}META.json`,
-    Body: JSON.stringify(metadata),
-    ContentType: "binary/octet-stream"
-  }).promise();
-
-  const ecgArr = Array.prototype.slice.call(ecgFloat32) as number[];
-
-  // calculate the minimum distance between heartbeats
-  // 250BPM = 4.16Hz
-  const minDist = Math.round(body.sampleRate / 4.16); 
-  const heartbeats = segmentHeartbeat(ecgArr, minDist, .7);
-
-  const predRes = invokeSage(heartbeats);
-
-  // wait for all promises to resolve
-  const results = await Promise.all([emailRes, audRes, ecgRes, metaRes, predRes]);
-
-  const response = {
-    statusCode: 200,
-    headers: {
-    },
-    body: JSON.stringify(results[4])
-  };
-  return response;
-};
-
-function segmentHeartbeat(beatsArr: number[], mindist: number, threshpct = 0.7): number[][] {
-  let nums = beatsArr;
+/**
+ * Segments the ECG values into individual beats
+ * 
+ * @param nums ECG values 
+ * @param mindist minimum distance between peaks
+ * @param threshpct threshold to be a peak
+ * @returns array of beats
+ */
+function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7): number[][] {
   let globalmax = Math.max(...nums);
 
   // find peaks in nums that are above thereshold
@@ -202,6 +147,8 @@ function segmentHeartbeat(beatsArr: number[], mindist: number, threshpct = 0.7):
         }
       }
     }
+
+    maxinds.sort((a, b) => a - b);
   }
   else {
     // no peaks found
@@ -211,10 +158,10 @@ function segmentHeartbeat(beatsArr: number[], mindist: number, threshpct = 0.7):
   // segment based on beats
 
   const beats = [];
-  for (let i = 1; i < maxinds.length-1; i++) {
-    const diff = maxinds[i+1] - maxinds[i-1];
-    const start = Math.round(maxinds[i] - diff/4);
-    const end = Math.round(maxinds[i] + diff/4);
+  for (let i = 1; i < maxinds.length - 1; i++) {
+    const diff = maxinds[i + 1] - maxinds[i - 1];
+    const start = Math.round(maxinds[i] - diff / 4);
+    const end = Math.round(maxinds[i] + diff / 4);
 
     beats.push(subSample(nums.slice(start, end), 186));
   }
@@ -222,7 +169,14 @@ function segmentHeartbeat(beatsArr: number[], mindist: number, threshpct = 0.7):
   return beats;
 }
 
-function subSample(arr: number[], newSize: number) {
+/**
+ * Simple array sub-sampling
+ * @param arr input array
+ * @param newSize desired size of the new array
+ * @returns 
+ */
+function subSample(arr: number[], newSize: number): number[] {
+  console.log(arr.length)
   const newArr = [];
   const sizeRatio = arr.length / newSize;
   for (let i = 0; i < newSize; i++) {
@@ -230,3 +184,78 @@ function subSample(arr: number[], newSize: number) {
   }
   return newArr
 }
+
+export const handler = async (event: APIGatewayEvent, context: Context): Promise<APIGatewayProxyResult> => {
+  const bodyBuff = Buffer.from(event.body, 'base64');
+  const bodyStr = bodyBuff.toString('utf8');
+  const body = JSON.parse(bodyStr) as PostParams;
+  const audioBuf = Buffer.from(body.audio, 'base64');
+  const ecgBuf = Buffer.from(body.ecg, 'base64');
+
+  const ecgFloat32 = buffToFloat32(ecgBuf);
+  // join the floats into a string
+  const ecgCsv = ecgFloat32.join('\n');
+
+  const sesParams = getEmailParams(body.destEmail, body.patientID, body.startTime.toString());
+  const emailRes = body.sendEmail ? ses.sendEmail(sesParams).promise() : Promise.resolve();
+
+  const pathPrefix = `${body.patientID}${body.startTime}${body.stethoscopeLocation}`;
+
+  const audRes = s3.putObject({
+    Bucket: "heartmonitor-audiotest",
+    Key: `${pathPrefix}AUDIO.wav`,
+    Body: audioBuf,
+    ContentType: "audio/x-wav"
+  }).promise();
+
+  const ecgRes = s3.putObject({
+    Bucket: "heartmonitor-audiotest",
+    Key: `${pathPrefix}ECG.csv`,
+    Body: ecgCsv,
+    ContentType: "text/csv"
+  }).promise();
+
+
+  const ecgArr = Array.prototype.slice.call(ecgFloat32) as number[];
+
+  // calculate the minimum distance between heartbeats
+  // 250BPM = 4.16Hz
+  const minDist = Math.round(body.sampleRate / 4.16);
+  const heartbeats = segmentHeartbeat(ecgArr, minDist, .7);
+  const predRes = invokeSage(heartbeats);
+
+  return Promise.all([emailRes, audRes, ecgRes, predRes]).then(results => {
+    const screenResults = results[3];
+
+    const metadata = {
+      patientID: body.patientID,
+      startTime: body.startTime,
+      destEmail: body.destEmail,
+      sampleRate: body.sampleRate,
+      stethoscopeLocation: body.stethoscopeLocation,
+      screenResults: screenResults
+    };
+
+    return s3.putObject({
+      Bucket: "heartmonitor-audiotest",
+      Key: `${pathPrefix}META.json`,
+      Body: JSON.stringify(metadata),
+      ContentType: "binary/octet-stream"
+    }).promise().then(() => {
+      return {
+        statusCode: 200,
+        headers: {
+        },
+        body: JSON.stringify(screenResults)
+      }
+    });
+
+  }).catch(err => {
+    return {
+      statusCode: 500,
+      headers: {
+      },
+      body: JSON.stringify(err)
+    }
+  });
+};

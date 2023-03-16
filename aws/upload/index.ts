@@ -8,13 +8,24 @@ AWS.config.update({ region: 'us-east-1' });
 
 const sage = new AWS.SageMakerRuntime();
 
+enum AuscultationPt {
+  aortic = "aortic",
+  mitral = "mitral",
+  tricuspid = "tricuspid",
+  pulmonic = "pulmonic",
+  unknown = "unknown",
+}
+
 interface PostParams {
   audio: string;
   ecg: string;
   patientID: string;
-  startTime: number;
   destEmail: string;
+  startTime: number;
   password: string;
+  sampleRate: number;
+  stethoscopeLocation: AuscultationPt;
+  sendEmail: boolean;
 }
 
 /**
@@ -66,8 +77,11 @@ async function upload(audioData: Buffer,
     ecg: ecgData.toString('base64'),
     patientID: patientID, 
     destEmail: email,
-    startTime: Date.now(),
+    startTime: 1678929332854,
     password: apiKey,
+    sampleRate: 3000,
+    stethoscopeLocation: AuscultationPt.mitral,
+    sendEmail: true,
   }
 
   // the JSON object is sent as the body of the POST request, which is a string
@@ -79,15 +93,9 @@ async function DoUploadDemo() {
 
   // read the metronome file, then read the ecg file
   const audioFile = await fs.readFileSync('./metronome80.wav');
-  const ecgFile = await fs.readFileSync('./../../ml/dataset/archive/mitbih_test.csv');
-
-  // get first line of ecgFile
-  const lines = ecgFile.toString().split('\n')
-  const line = lines[99].split(',').map(Number)
-  line.pop()
-  line.pop()
-
-  console.log(line.length)
+  let csvstr = fs.readFileSync("./ECG.txt").toString();
+  let lines = csvstr.split('\n');
+  let line = lines.map(line => line.substring(23, 36)).map(str => Number(str))
 
   const float32 = new Float32Array(line);
   const float32Buffer = Buffer.from(float32.buffer);
@@ -96,15 +104,6 @@ async function DoUploadDemo() {
 
   return upload(audioFile, float32Buffer, 'drew', 'andrewc01@vt.edu', 'gokies');
 }
-
-const start = Date.now();
-
-DoUploadDemo().then((res) => {
-  console.log(res);
-
-  const end = Date.now();
-  console.log(`Time: ${end - start} ms`);
-});
 
 /**
  * 
@@ -161,6 +160,15 @@ async function invokeSageDemo(){
 
   return invokeSage(beats)
 }
+
+const start = Date.now();
+
+DoUploadDemo().then((res) => {
+  console.log(res);
+
+  const end = Date.now();
+  console.log(`Time: ${end - start} ms`);
+});
 
 // const start = Date.now()
 // invokeSageDemo().then((data)=>{

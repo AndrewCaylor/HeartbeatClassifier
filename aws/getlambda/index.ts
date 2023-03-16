@@ -36,11 +36,19 @@ function getContentType(path: string) {
   }
 }
 
+enum AuscultationPt {
+  aortic = "aortic",
+  mitral = "mitral",
+  tricuspid = "tricuspid",
+  pulmonic = "pulmonic",
+}
+
 interface Params {
   patientID: string;
   startTime: string;
   password: string;
-  dataType: "audio" | "ecg" | undefined;
+  dataType: "audio" | "ecg" | "meta" | undefined;
+  stethoscopeLocation: AuscultationPt;
 }
 export const handler = async (event, context): Promise<APIGatewayProxyResult> => {
 
@@ -58,7 +66,7 @@ export const handler = async (event, context): Promise<APIGatewayProxyResult> =>
   }
   else {
     const params = event.queryStringParameters as Params;
-    const { patientID, startTime, password, dataType } = params;
+    const { patientID, startTime, stethoscopeLocation, password, dataType } = params;
 
     if (!patientID || !startTime || password !== "gokies") {
       return badParamsErr;
@@ -66,11 +74,15 @@ export const handler = async (event, context): Promise<APIGatewayProxyResult> =>
 
     switch (dataType) {
       case "audio":
-        key = `${patientID}${startTime}AUDIO.wav`;
+        key = `${patientID}${startTime}${stethoscopeLocation}AUDIO.wav`;
         bucket = "heartmonitor-audiotest";
         break;
       case "ecg":
-        key = `${patientID}${startTime}ECG.csv`;
+        key = `${patientID}${startTime}${stethoscopeLocation}ECG.csv`;
+        bucket = "heartmonitor-audiotest";
+        break;
+      case "meta":
+        key = `${patientID}${startTime}${stethoscopeLocation}META.json`;
         bucket = "heartmonitor-audiotest";
         break;
       default:

@@ -4,14 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "upload": "tsc && 7z a -tzip getlambda.zip ./build && aws lambda update-function-code --function-name getlambda --zip-file fileb://getlambda.zip",
+    "upload": "tsc && zip getlambda ./build/* && aws lambda update-function-code --function-name getlambda --zip-file fileb://getlambda.zip",
     "test": "tsc && node ./build/index.js"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/aws-lambda": "^8.10.108",
-    "@types/node": "^18.11.2"
+    "@types/node": "^18.11.2",
+    "typescript": "^4.8.4"
   },
   "dependencies": {
     "aws-sdk": "^2.1236.0"
