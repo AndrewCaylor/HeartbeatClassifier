@@ -10,7 +10,12 @@ import os
 import os.path as Path
 from record import recordWAV, recordECG, filterWAV
 from upload import encodeCSV, encodeWAV, upload
+import datetime
 import time
+
+lastState = "none"
+unix_timestamp = 0
+
 
 def gui():
     # UPLOAD VARS (others are defined in upload script)
@@ -22,6 +27,9 @@ def gui():
     # create a fullscreen window
     window.attributes('-fullscreen', True)
     window.title("Heartbeat Analysis Tool")
+    
+    window.columnconfigure(0, weight=1)
+    window.columnconfigure(1, weight=1)
 
     # ButtonMenu widgets
     viewPlaybackButton = tk.Button(window, text="View Playback", command = lambda: transitionState("playback"))
@@ -32,6 +40,7 @@ def gui():
 
     #record widgets
     def recordAndUpload():
+        global unix_timestamp
         recordTextVar.set("Recording...")
         window.update()
         
@@ -48,14 +57,24 @@ def gui():
         wavData = encodeWAV(filteredPath)
         ecgData = encodeCSV(ecgpath)
         
-        result = upload(wavData, ecgData, PATIENT_ID, EMAIL, "gokies")
+        result = upload(wavData, ecgData, PATIENT_ID, EMAIL, "gokies", unix_timestamp, stethLoc.get(), True)
         
-        recordTextVar.set("Done! \n Results: " + result)
+        recordTextVar.set("Results: " + result)
         window.update()
-                
+    
     doRecordButton = tk.Button(window, text="Start Recording", command = recordAndUpload)
     recordTextVar = tk.StringVar(window, "")
     recordStatusLabel = tk.Label(window, textvariable=recordTextVar)
+    
+    stethLoc = tk.StringVar(window, "unknown")
+    radio1 = tk.Radiobutton(window, text="Aortic", value="aortic", variable=stethLoc)
+    radio2 = tk.Radiobutton(window, text="Mitrial", value="mitrial", variable=stethLoc)
+    radio3 = tk.Radiobutton(window, text="Tricuspid", value="tricuspid", variable=stethLoc)
+    radio4 = tk.Radiobutton(window, text="Pulmonic", value="pulmonic", variable=stethLoc)
+    radio5 = tk.Radiobutton(window, text="None", value="unknown", variable=stethLoc)
+    
+    sendEmail = tk.StringVar(window, "false")
+    sendEmailCheck = tk.Checkbutton(window, text="Send Email", variable=sendEmail,  onvalue="true", offvalue="false")
 
     #settings widgets
 
@@ -86,14 +105,20 @@ def gui():
 
     #functions to display info for each state
 
-    def clear():
+    def clear(lastState):
     #     make sure to run pack_forget for each widget :P
         viewPlaybackButton.pack_forget()
         recordButton.pack_forget()
         settingsButton.pack_forget()
         
-        doRecordButton.pack_forget()
-        recordStatusLabel.pack_forget()
+        doRecordButton.grid_forget()
+        recordStatusLabel.grid_forget()
+        radio1.grid_forget()
+        radio2.grid_forget()
+        radio3.grid_forget()
+        radio4.grid_forget()
+        radio5.grid_forget()
+
         
         patientIDLabel.pack_forget()
         cardiologistEmailLabel.pack_forget()
@@ -102,15 +127,20 @@ def gui():
         saveButton.pack_forget()
         
         playButton.pack_forget()
-
-        exitButton.pack_forget()
+        
+        
+        if(lastState == "recordmenu"):
+            exitButton.grid_forget()
+        else:
+            exitButton.pack_forget()
 
     # create sort of a state machine
     # previous state is irrelevant (for now)
     def transitionState(state):
+        global lastState
         #first undraw all buttons/items
-        clear()
-        
+        clear(lastState)
+                
         #then redraw the items for the correct state
         if(state == "settings"):
             editSettings()
@@ -118,8 +148,12 @@ def gui():
             viewPlayback()
         elif(state == "recordmenu"):
             recordMenu()
+        elif(state == "menu" and lastState == "menu"):
+            exit()
         else:
             menu()
+            
+        lastState = state
 
     def editSettings():
         patientIDLabel.pack()
@@ -145,16 +179,27 @@ def gui():
 
         
     def recordMenu():
-        doRecordButton.pack()
-        recordStatusLabel.pack()
-        
-        exitButton.pack()
+        global unix_timestamp
+        presentDate = datetime.datetime.now()
+        unix_timestamp = datetime.datetime.timestamp(presentDate)
+                
+        doRecordButton.grid(column=0, row=0)
+        recordStatusLabel.grid(column=0, row=1)
+        exitButton.grid(column=0, row=2)
 
+        radio1.grid(column=1, row=0)
+        radio2.grid(column=1, row=1)
+        radio3.grid(column=1, row=2)
+        radio4.grid(column=1, row=3)
+        radio5.grid(column=1, row=4)
+ 
         
     def menu():
         viewPlaybackButton.pack()
         recordButton.pack()
         settingsButton.pack()
+        exitButton.pack()
+
         
     # start on the menu state
     transitionState("menu")

@@ -7,13 +7,12 @@ import json
 
 # Uploads the ECG signal and the respective audio signal to the cloud for processing
 # Displays the results of the prediction
-def upload(audioData, ecgData, patientID, email, apiKey):
+def upload(audioData, ecgData, patientID, email, apiKey, sess, stethoscopeLocation = "unknown", sendEmail = False):
     #python is stupid and decides to add some characters to the beginning and the end    
     audioB64 = str(base64.b64encode(audioData))[2:-1]
     ecgB64 = str(base64.b64encode(ecgData))[2:-1]
         
-    presentDate = datetime.datetime.now()
-    unix_timestamp = datetime.datetime.timestamp(presentDate)
+
     
     url = "https://75xtipvj56.execute-api.us-east-1.amazonaws.com/upload"
     myobj = {
@@ -21,8 +20,11 @@ def upload(audioData, ecgData, patientID, email, apiKey):
         "ecg": ecgB64,
         "patientID": patientID, 
         "destEmail": email,
-        "startTime": str(unix_timestamp),
+        "startTime": str(sess),
         "password": apiKey,
+        "sampleRate": 3000,
+        "stethoscopeLocation": stethoscopeLocation,
+        "sendEmail": sendEmail
     }
 
     jsonstr = json.dumps(myobj)
@@ -42,7 +44,7 @@ def encodeCSV(path):
         lines = fp.readlines()
     
     # creates the 186 length list 
-    f32arr = np.zeros((1,186), dtype=np.float32)
+    f32arr = np.zeros((1,len(lines)), dtype=np.float32)
     for i in range(len(lines)):
         f32arr[0,i] = float(lines[i])
     arrbytes = f32arr.tobytes()
