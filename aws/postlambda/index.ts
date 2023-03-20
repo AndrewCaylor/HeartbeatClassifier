@@ -117,7 +117,7 @@ function buffToFloat32(buff: Buffer) {
  * @param threshpct threshold to be a peak
  * @returns array of beats
  */
-function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7): number[][] {
+function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
   let globalmax = Math.max(...nums);
 
   // find peaks in nums that are above thereshold
@@ -157,16 +157,20 @@ function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7): num
 
   // segment based on beats
 
-  const beats = [];
+  const beats:number[][] = [];
+  const starts:number[] = [];
   for (let i = 1; i < maxinds.length - 1; i++) {
     const diff = maxinds[i + 1] - maxinds[i - 1];
     const start = Math.round(maxinds[i] - diff / 4);
     const end = Math.round(maxinds[i] + diff / 4);
-
+    starts.push(start)
     beats.push(subSample(nums.slice(start, end), 186));
   }
 
-  return beats;
+  return {
+    beats: beats,
+    starts: starts
+  };
 }
 
 /**
@@ -222,7 +226,7 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   // 250BPM = 4.16Hz
   const minDist = Math.round(body.sampleRate / 4.16);
   const heartbeats = segmentHeartbeat(ecgArr, minDist, .7);
-  const predRes = invokeSage(heartbeats);
+  const predRes = invokeSage(heartbeats.beats);
 
   return Promise.all([emailRes, audRes, ecgRes, predRes]).then(results => {
     const screenResults = results[3];
@@ -233,7 +237,8 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
       destEmail: body.destEmail,
       sampleRate: body.sampleRate,
       stethoscopeLocation: body.stethoscopeLocation,
-      screenResults: screenResults
+      screenResults: screenResults,
+      beatLocations: heartbeats.starts
     };
 
     return s3.putObject({
