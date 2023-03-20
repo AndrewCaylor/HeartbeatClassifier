@@ -109,24 +109,32 @@ function buffToFloat32(buff: Buffer) {
   }
   return float32;
 }
-/**
- * Segments the ECG values into individual beats
- * 
- * @param nums ECG values 
- * @param mindist minimum distance between peaks
- * @param threshpct threshold to be a peak
- * @returns array of beats
- */
-function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
-  let globalmax = Math.max(...nums);
+
+function findMaximums(nums: number[], mindist: number, threshpct = 0.7) {
+  let mean = 0;
+
+  for (let i = 0; i < nums.length; i++) {
+    mean += nums[i];
+  }
+  mean /= nums.length;
+
+  // normalize around mean
+  let normalized = nums.map(x => x - mean);
+
+  // flip if more negative
+  if(Math.max(...normalized) < Math.abs(Math.min(...normalized))) {
+    normalized = normalized.map(x => -x);
+  }
+
+  let globalmax = Math.max(...normalized);
 
   // find peaks in nums that are above thereshold
   let maxinds = [];
-  for (let i = 1; i < nums.length - 1; i++) {
+  for (let i = 1; i < normalized.length - 1; i++) {
     // check for local max
-    if (nums[i] > nums[i - 1] && nums[i] > nums[i + 1]) {
+    if (normalized[i] > normalized[i - 1] && normalized[i] > normalized[i + 1]) {
       // check if above threshold
-      if (nums[i] > globalmax * threshpct) {
+      if (normalized[i] > globalmax * threshpct) {
         maxinds.push(i);
       }
     }
@@ -134,7 +142,7 @@ function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
 
   if (maxinds.length > 0) {
     // sort localmaxinds by size
-    maxinds.sort((a, b) => nums[b] - nums[a]);
+    maxinds.sort((a, b) => normalized[b] - normalized[a]);
 
     // remove peaks that are too close
     for (let i = 0; i < maxinds.length; i++) {
@@ -155,21 +163,46 @@ function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
     throw new Error("No peaks found");
   }
 
+  return maxinds;
+}
+
+/**
+ * Segments the ECG values into individual beats, normalizes nums aroud mean before sumsampling
+ * 
+ * @param nums ECG values 
+ * @param mindist minimum distance between peaks
+ * @param threshpct threshold to be a peak
+ * @returns array of beats
+ */
+function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
+  
+  const maxinds = findMaximums(nums, mindist, threshpct);
+
+  // normalize nums from 0 to 1
+  const min = Math.min(...nums);
+  let normalized = nums.map(x => x - min);
+  const max = Math.max(...normalized);
+  normalized = normalized.map(x => x / max);
+
   // segment based on beats
 
   const beats:number[][] = [];
-  const starts:number[] = [];
+  const ranges:number[] = [];
   for (let i = 1; i < maxinds.length - 1; i++) {
     const diff = maxinds[i + 1] - maxinds[i - 1];
     const start = Math.round(maxinds[i] - diff / 4);
     const end = Math.round(maxinds[i] + diff / 4);
-    starts.push(start)
-    beats.push(subSample(nums.slice(start, end), 186));
+    ranges.push(start)
+    ranges.push(end)
+
+    beats.push(subSample(normalized.slice(start, end), 186));
   }
+
+  console.log(beats)
 
   return {
     beats: beats,
-    starts: starts
+    ends: ranges
   };
 }
 
@@ -226,7 +259,9 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   // 250BPM = 4.16Hz
   const minDist = Math.round(body.sampleRate / 4.16);
   const heartbeats = segmentHeartbeat(ecgArr, minDist, .7);
-  const predRes = invokeSage(heartbeats.beats);
+
+  // only invoke SageMaker if there are heartbeats
+  const predRes = heartbeats.beats.length === 0 ? new Promise(() => []) : invokeSage(heartbeats.beats);
 
   return Promise.all([emailRes, audRes, ecgRes, predRes]).then(results => {
     const screenResults = results[3];
@@ -238,7 +273,7 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
       sampleRate: body.sampleRate,
       stethoscopeLocation: body.stethoscopeLocation,
       screenResults: screenResults,
-      beatLocations: heartbeats.starts
+      beatLocations: heartbeats.ends
     };
 
     return s3.putObject({

@@ -1,5 +1,5 @@
 import * as AWS from 'aws-sdk';
-import { Context, APIGatewayProxyEvent, APIGatewayProxyResult,  } from 'aws-lambda';
+import { APIGatewayProxyResult } from 'aws-lambda';
 
 AWS.config.update({ region: 'us-east-1' });
 const s3 = new AWS.S3({ apiVersion: '2006-03-01', region: 'us-east-1' });
@@ -92,22 +92,32 @@ export const handler = async (event, context): Promise<APIGatewayProxyResult> =>
     }
   }
 
-  const res = (await s3.getObject({
+  return s3.getObject({
     Bucket: bucket,
     Key: key,
-  }).promise()).Body;
+  }).promise().then((data) => {
+    const res = data.Body as Buffer;
 
-  const contentType = getContentType(key);
-  const isWeb = bucket === "heartmonitorweb";
+    const contentType = getContentType(key);
+    const isWeb = bucket === "heartmonitorweb";
 
-  const response = {
-    statusCode: 200,
-    headers: {
-      'Content-Type': contentType,
-      'Access-Control-Allow-Origin': '*',
-    },
-    body: isWeb ? res.toString('utf-8') : res.toString('base64'),
-    isBase64Encoded: !isWeb,
-  };
-  return response;
+    const response = {
+      statusCode: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: isWeb ? res.toString('utf-8') : res.toString('base64'),
+      isBase64Encoded: !isWeb,
+    };
+    return response;
+  }).catch((err) => {
+    return {
+      statusCode: 400,
+      headers: {
+      },
+      body: JSON.stringify(err.message),
+      message: err.message,
+    }
+  });
 };

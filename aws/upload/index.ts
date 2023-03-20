@@ -77,10 +77,10 @@ async function upload(audioData: Buffer,
     ecg: ecgData.toString('base64'),
     patientID: patientID, 
     destEmail: email,
-    startTime: 1678929332854,
+    startTime: 1678929332855,
     password: apiKey,
-    sampleRate: 1600,
-    stethoscopeLocation: AuscultationPt.mitral,
+    sampleRate: 1200,
+    stethoscopeLocation: AuscultationPt.unknown,
     sendEmail: true,
   }
 

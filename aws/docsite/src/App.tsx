@@ -8,6 +8,15 @@ import { Alert, AlertTitle, MenuItem, Select, SelectChangeEvent, Table, TableCel
 const baseURL = 'https://75xtipvj56.execute-api.us-east-1.amazonaws.com';
 
 function BeatsTable(data: number[][]) {
+  if (data.length === 0) {
+    return <Alert severity='error'>
+    <AlertTitle>Error: No data found</AlertTitle>
+    Error Message: No results for this recording
+  </Alert>;
+  }
+
+  console.log(data)
+
   return (
     <TableContainer>
       <Table aria-label="simple table">
@@ -52,6 +61,8 @@ function App() {
   const [waveformMin, setWaveformMin] = useState<number>(0);
   const [location, setLocation] = useState<string>('unknown');
   const [screenResults, setScreenResults] = useState<number[][]>([[]]);
+
+  const [beatStarts, setBeatStarts] = useState<number[]>([]);
 
   const [loaded, setLoaded] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -136,8 +147,16 @@ function App() {
           });
       };
 
-      Promise.all([getWaveform(`${url}ecg`), getMetadata(`${url}meta`)]).then((data) => {
-        const [ecgdata, metadata] = data;
+      Promise.allSettled([getWaveform(`${url}ecg`), getMetadata(`${url}meta`)]).then((data) => {
+        const [ecgres, metares] = data;
+
+        // handle ECG stuff
+        if (ecgres.status === 'rejected') {
+          setErrorMessage(ecgres.reason);
+          setLoaded(true);
+          return;
+        }
+        const ecgdata = ecgres.value;
 
         const time = tempaud.duration;
         const x = Array.from(Array(ecgdata.length).keys()).map((i) => i * time / ecgdata.length);
@@ -149,17 +168,39 @@ function App() {
         setLoaded(true);
         setErrorMessage('');
 
+        // handle metadata stuff, we can still load the page even if this fails
+        if (metares.status === 'rejected') {
+          setScreenResults([]);
+          setBeatStarts([]);
+          return;
+        }
+        const metadata = metares.value;
         setScreenResults(JSON.parse(metadata).screenResults.predictions);
+        setBeatStarts(JSON.parse(metadata).beatLocations);
       })
     });
 
     tempaud.addEventListener('error', () => {
+      console.log(tempaud.error);
       setErrorMessage(tempaud.error?.message as string);
       setLoaded(true);
     });
   }
 
   function getContent() {
+    console.log(waveformx.length)
+    let end = true
+
+    const startsList: object[] = beatStarts.map((x) => {
+      end = !end
+      return {
+        x: [x * duration / waveformx.length, x * duration / waveformx.length],
+        y: [waveformMin, waveformMax],
+        type: 'scatter',
+        mode: 'lines',
+        marker: { color: end ? 'orange' : 'green' },
+      }
+    });
     if (errorMessage) {
       return <Alert severity='error'>
         <AlertTitle>Error: No data found</AlertTitle>
@@ -184,8 +225,9 @@ function App() {
               mode: 'lines',
               marker: { color: 'blue' },
             },
+            ...startsList
           ]}
-          layout={{ title: 'ECG Data', showlegend: false}}
+          layout={{ title: 'ECG Data', showlegend: false }}
         />
           {BeatsTable(screenResults)}
         </>
