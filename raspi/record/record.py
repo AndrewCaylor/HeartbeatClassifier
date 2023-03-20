@@ -22,7 +22,7 @@ def recordECG():
             ecg[i] = voltage
             t[i] = curr_time
             curr_time += 0.01
-            time.slep(0.001)
+            time.sleep(0.001)
 
         with open("recordECG.csv", "w") as f:
             for line in ecg:
@@ -151,4 +151,5 @@ def recordBoth():
     wav.join()
     ecg.join()
 
-    return [wav, ecg]
+if __name__ == "__main__":
+    recordBoth()
