@@ -23,10 +23,12 @@ def recordECG():
             t[i] = curr_time
             curr_time += 0.01
             time.slep(0.001)
-        return ecg
+
+        with open("recordECG.csv", "w") as f:
+            for line in ecg:
+                f.write(line)
     except:
         print("ADC not connected")
-        return []
 
 #records audio and writes to wav file. returns path to file
 def recordWAV():
@@ -43,15 +45,13 @@ def recordWAV():
         searchStr = "card " + str(i)
         # If we can record from a device, record from the first one we find
         if(searchStr in data):
-            os.system("arecord -Dplughw:" + str(i) + ",0 -f S16_LE --duration=5 -r8000 record.wav")
+            os.system("arecord -Dplughw:" + str(i) + ",0 -f S16_LE --duration=5 -r8000 recordWAV.wav")
             found = True
             break
     
 #     close and delete the temp file
     f.close()
     os.remove("temp_784.txt")
-    
-    return found
 
 def freqFilter(signal):
     
