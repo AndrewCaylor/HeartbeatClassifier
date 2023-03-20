@@ -3,9 +3,33 @@ import wave
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import Adafruit_ADS1x15 as ADC
+import multiprocessing as mp
+
+def recordECG():
+    record_time = 1 #seconds
+    samples = record_time*100 #samples based on 100Hz
+    try:
+        adc = ADC.ADS1015(address=0x49, busnum=1)
+        value = 0 #empty for storing ADC readings
+        curr_time = 0 #to store current time
+        ecg = samples*[0]
+        t = samples*[0]
+        #loop over time period
+        for i in range(samples):
+            value = adc.read_adc(0, gain=1) #0 for analog input A0
+            voltage = value*4/2048
+            ecg[i] = voltage
+            t[i] = curr_time
+            curr_time += 0.01
+            time.slep(0.001)
+        return ecg
+    except:
+        print("ADC not connected")
+        return []
 
 #records audio and writes to wav file. returns path to file
-def recordWAV(relativePath):
+def recordWAV():
     
     # Read all devices that can record audio
     os.system("arecord -l > temp_784.txt")
@@ -19,7 +43,7 @@ def recordWAV(relativePath):
         searchStr = "card " + str(i)
         # If we can record from a device, record from the first one we find
         if(searchStr in data):
-            os.system("arecord -Dplughw:" + str(i) + ",0 -f S16_LE --duration=5 -r8000 " + relativePath)
+            os.system("arecord -Dplughw:" + str(i) + ",0 -f S16_LE --duration=5 -r8000 record.wav")
             found = True
             break
     
@@ -38,15 +62,6 @@ def freqFilter(signal):
 
     filtered = fourier * lowpass
     back = np.real(np.fft.ifft(filtered))
-    
-#     plt.plot(signal)
-#     plt.show()
-#     
-#     plt.plot(fourier[0:1000])
-#     plt.show()
-#     
-#     plt.plot(np.fft.fft(back)[0:1000])
-#     plt.show()
     
     return back
 
@@ -128,15 +143,12 @@ def filterWAV(pathOut, pathSignal, pathNoise = None):
         
     writeWAV(pathOut,amped)
 
-#records ECG and writes to csv file
-def recordECG():
-    #TODO implement this function for real
-    return "ecg.csv"
-    
-if __name__ == "__main__":
-#     success1 = recordWAV("ref.wav")
-#     print("done")
-#     time.sleep(2)
-    success2 = recordWAV("heart.wav")
-    print("done")
-    filterWAV("filtered.wav", "heart.wav")
+def recordBoth():
+    wav = mp.Process(target=recordWAV)
+    ecg = mp.Process(target=recordECG)
+    wav.start()
+    ecg.start()
+    wav.join()
+    ecg.join()
+
+    return [wav, ecg]

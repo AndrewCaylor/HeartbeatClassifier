@@ -42,11 +42,13 @@ def upload(audioData, ecgData, patientID, email, apiKey, sess, stethoscopeLocati
 def encodeCSV(path):
     with open(path) as fp:
         lines = fp.readlines()
-    
+    return encodeArr(lines)
+
+def encodeArr(arr):
     # creates the 186 length list 
-    f32arr = np.zeros((1,len(lines)), dtype=np.float32)
-    for i in range(len(lines)):
-        f32arr[0,i] = float(lines[i])
+    f32arr = np.zeros((1,len(arr)), dtype=np.float32)
+    for i in range(len(arr)):
+        f32arr[0,i] = float(arr[i])
     arrbytes = f32arr.tobytes()
     
     return arrbytes
