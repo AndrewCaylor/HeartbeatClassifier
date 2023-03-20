@@ -26,7 +26,7 @@ def recordECG():
 
         with open("recordECG.csv", "w") as f:
             for line in ecg:
-                f.write(line)
+                f.write(str(line) + "\n")
     except:
         print("ADC not connected")
 
