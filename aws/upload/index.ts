@@ -79,10 +79,12 @@ async function upload(audioData: Buffer,
     destEmail: email,
     startTime: 1678929332854,
     password: apiKey,
-    sampleRate: 3000,
+    sampleRate: 1600,
     stethoscopeLocation: AuscultationPt.mitral,
     sendEmail: true,
   }
+
+  console.log(uploadParams)
 
   // the JSON object is sent as the body of the POST request, which is a string
   const response = await axios.post("/upload", JSON.stringify(uploadParams), {});
@@ -93,10 +95,10 @@ async function DoUploadDemo() {
 
   // read the metronome file, then read the ecg file
   const audioFile = await fs.readFileSync('./metronome80.wav');
-  let csvstr = fs.readFileSync("./ECG.txt").toString();
+  let csvstr = fs.readFileSync("./ecg_out_low_0.txt").toString();
   let lines = csvstr.split('\n');
-  let line = lines.map(line => line.substring(23, 36)).map(str => Number(str))
-
+  let line = lines.map(str => Number(str))
+  
   const float32 = new Float32Array(line);
   const float32Buffer = Buffer.from(float32.buffer);
 
