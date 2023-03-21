@@ -22,7 +22,7 @@ def recordECG():
             ecg[i] = voltage
             t[i] = curr_time
             curr_time += 0.01
-            time.sleep(0.001)
+            time.sleep(0.01)
 
         with open("recordECG.csv", "w") as f:
             for line in ecg:
@@ -141,7 +141,7 @@ def filterWAV(pathOut, pathSignal, pathNoise = None):
 
     amped = ((maxsize/datamax) * filtered).astype(int)
         
-    writeWAV(pathOut,amped)
+    writeWAV(pathOut, amped)
 
 def recordBoth():
     wav = mp.Process(target=recordWAV)
