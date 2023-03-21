@@ -86,16 +86,12 @@ def freqFilterNoise(signal, noise):
     return back
 
 if __name__ == "__main__":
-    # wav1 = mp.Process(target=recordWAV, args=(0,))
-    # time.sleep(1)
-    # wav2 = mp.Process(target=recordWAV, args=(1,))
-    # wav1.start()
-    # wav2.start()
-    # wav1.join()
-    # wav2.join()
-
-    recordWAV(0)
-    recordWAV(1)
+    wav1 = mp.Process(target=recordWAV, args=(0,))
+    wav2 = mp.Process(target=recordWAV, args=(1,))
+    wav1.start()
+    wav2.start()
+    wav1.join()
+    wav2.join()
 
     wavFile = wave.open("recordWAV0.wav", 'r')
     wavFile2 = wave.open("recordWAV1.wav", 'r')
