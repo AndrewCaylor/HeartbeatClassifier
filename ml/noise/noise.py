@@ -77,10 +77,10 @@ def freqFilterNoise(signal, noise):
     filtered = fourierSignal - fourierNoise
     back = np.real(np.fft.ifft(filtered))
     
-    plt.plot(fourierSignal[0:1000])    
-    plt.plot(fourierNoise[0:1000])
-    plt.plot(filtered[0:1000])
-    plt.show()
+    # plt.plot(fourierSignal[0:1000])    
+    # plt.plot(fourierNoise[0:1000])
+    # plt.plot(filtered[0:1000])
+    # plt.show()
     
     
     return back
@@ -91,7 +91,12 @@ def writeWAV(path, data):
         f.setsampwidth(2)
         f.setframerate(8000)
         f.writeframes(data.astype(np.short).tobytes())
-
+def readWAV(path):
+    with wave.open(path) as f:
+        buffer = f.readframes(f.getnframes())
+        interleaved = np.frombuffer(buffer, dtype=f'int{f.getsampwidth()*8}')
+        data = np.reshape(interleaved, (-1, f.getnchannels()))
+        return data
 if __name__ == "__main__":
     wav1 = mp.Process(target=recordWAV, args=(0,))
     wav2 = mp.Process(target=recordWAV, args=(1,))
@@ -103,22 +108,22 @@ if __name__ == "__main__":
     wavFile = wave.open("recordWAV0.wav", 'r')
     wavFile2 = wave.open("recordWAV1.wav", 'r')
     
-    signal = wavFile.readframes(-1)
-    signal = np.frombuffer(signal, dtype=np.int16)
-    signal = signal / 32768.0
-    
-    signal2 = wavFile2.readframes(-1)
-    signal2 = np.frombuffer(signal2, dtype=np.int16)
-    signal2 = signal2 / 32768.0
+    signal = readWAV("recordWAV0.wav")
+    signal2 = readWAV("recordWAV1.wav")
     
     wavFile.close()
     wavFile2.close()
     
-    outsignal = freqFilterNoise(signal, signal2)
+    filtered = freqFilterNoise(signal, signal2)
+
+    maxsize = (2**16)/2.5
+    datamax = max(np.max(filtered), -np.min(filtered))
+
+    amped = ((maxsize/datamax) * filtered).astype(int)
+        
+    writeWAV("out.wav", amped)
 
     # write to wav file
 
-    writeWAV("out.wav", outsignal)
-    
     plt.plot(signal)
     plt.show()
