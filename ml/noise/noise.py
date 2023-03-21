@@ -85,6 +85,13 @@ def freqFilterNoise(signal, noise):
     
     return back
 
+def writeWAV(path, data):
+    with wave.open(path, "w") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(8000)
+        f.writeframes(data.astype(np.short).tobytes())
+
 if __name__ == "__main__":
     wav1 = mp.Process(target=recordWAV, args=(0,))
     wav2 = mp.Process(target=recordWAV, args=(1,))
@@ -111,12 +118,7 @@ if __name__ == "__main__":
 
     # write to wav file
 
-    wavFile = wave.open("output.wav", 'w')
-    wavFile.setnchannels(1)
-    wavFile.setsampwidth(2)
-    wavFile.setframerate(8000)
-    wavFile.writeframes(outsignal)
-    wavFile.close()
+    writeWAV("out.wav", outsignal)
     
     plt.plot(signal)
     plt.show()
