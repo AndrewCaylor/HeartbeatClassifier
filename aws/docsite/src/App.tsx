@@ -8,11 +8,11 @@ import { Alert, AlertTitle, MenuItem, Select, SelectChangeEvent, Table, TableCel
 const baseURL = 'https://75xtipvj56.execute-api.us-east-1.amazonaws.com';
 
 function BeatsTable(data: number[][]) {
-  if (data.length === 0) {
+  if (!data?.length) {
     return <Alert severity='error'>
-    <AlertTitle>Error: No data found</AlertTitle>
-    Error Message: No results for this recording
-  </Alert>;
+      <AlertTitle>Error: No data found</AlertTitle>
+      Error Message: No results for this recording
+    </Alert>;
   }
 
   console.log(data)
@@ -168,16 +168,26 @@ function App() {
         setLoaded(true);
         setErrorMessage('');
 
-        // handle metadata stuff, we can still load the page even if this fails
-        if (metares.status === 'rejected') {
+        console.log(metares)
+        // handle metadata stuff, if it exists
+        // we still want to see the ECG even if the metadata is missing
+        try {
+          if (metares.status === 'rejected') {
+            setScreenResults([]);
+            setBeatStarts([]);
+            return;
+          }
+          const metadata = metares.value;
+          setScreenResults(JSON.parse(metadata).screenResults.predictions);
+          setBeatStarts(JSON.parse(metadata).beatLocations);
+        }
+        catch (e) {
+          console.log("error parsing metadata: " + e)
+          // sometimes the metares will succeed but the JSON.parse will fail
           setScreenResults([]);
           setBeatStarts([]);
-          return;
         }
-        const metadata = metares.value;
-        setScreenResults(JSON.parse(metadata).screenResults.predictions);
-        setBeatStarts(JSON.parse(metadata).beatLocations);
-      })
+      });
     });
 
     tempaud.addEventListener('error', () => {
@@ -220,7 +230,7 @@ function App() {
             },
             {
               x: [scanX, scanX],
-              y: [waveformMin, waveformMax],
+              y: [Math.min(waveformMin, -1), Math.max(waveformMax, 1)],
               type: 'scatter',
               mode: 'lines',
               marker: { color: 'blue' },

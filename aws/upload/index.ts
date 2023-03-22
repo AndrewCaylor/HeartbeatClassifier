@@ -77,7 +77,7 @@ async function upload(audioData: Buffer,
     ecg: ecgData.toString('base64'),
     patientID: patientID, 
     destEmail: email,
-    startTime: 1678929332855,
+    startTime: 235463456,
     password: apiKey,
     sampleRate: 1200,
     stethoscopeLocation: AuscultationPt.unknown,
@@ -91,11 +91,11 @@ async function upload(audioData: Buffer,
   return response;
 }
 
-async function DoUploadDemo() {
+async function DoUploadDemo(ecgpath: string) {
 
   // read the metronome file, then read the ecg file
   const audioFile = await fs.readFileSync('./metronome80.wav');
-  let csvstr = fs.readFileSync("./ecg_out_low_0.txt").toString();
+  let csvstr = fs.readFileSync(ecgpath).toString();
   let lines = csvstr.split('\n');
   let line = lines.map(str => Number(str))
   
@@ -165,12 +165,30 @@ async function invokeSageDemo(){
 
 const start = Date.now();
 
-DoUploadDemo().then((res) => {
-  console.log(res);
+// actual data!
+// DoUploadDemo("./ecg_out_low_0.txt").then((res) => {
+//   console.log(res);
+
+//   const end = Date.now();
+//   console.log(`Time: ${end - start} ms`);
+// });
+
+// he dead!
+DoUploadDemo("./dead.txt").then((res) => {
+  console.log(res.status, res.statusText, res.data);
 
   const end = Date.now();
   console.log(`Time: ${end - start} ms`);
 });
+
+
+// let str = ""
+// for (let i = 0; i < 999; i++) {  
+//   str += "0\n"
+// }
+// str += "0"
+
+// fs.writeFileSync("./dead.txt", str)
 
 // const start = Date.now()
 // invokeSageDemo().then((data)=>{

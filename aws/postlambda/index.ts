@@ -122,7 +122,7 @@ function findMaximums(nums: number[], mindist: number, threshpct = 0.7) {
   let normalized = nums.map(x => x - mean);
 
   // flip if more negative
-  if(Math.max(...normalized) < Math.abs(Math.min(...normalized))) {
+  if (Math.max(...normalized) < Math.abs(Math.min(...normalized))) {
     normalized = normalized.map(x => -x);
   }
 
@@ -160,7 +160,7 @@ function findMaximums(nums: number[], mindist: number, threshpct = 0.7) {
   }
   else {
     // no peaks found
-    throw new Error("No peaks found");
+    return [];
   }
 
   return maxinds;
@@ -175,7 +175,7 @@ function findMaximums(nums: number[], mindist: number, threshpct = 0.7) {
  * @returns array of beats
  */
 function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
-  
+
   const maxinds = findMaximums(nums, mindist, threshpct);
 
   // normalize nums from 0 to 1
@@ -186,8 +186,8 @@ function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
 
   // segment based on beats
 
-  const beats:number[][] = [];
-  const ranges:number[] = [];
+  const beats: number[][] = [];
+  const ranges: number[] = [];
   for (let i = 1; i < maxinds.length - 1; i++) {
     const diff = maxinds[i + 1] - maxinds[i - 1];
     const start = Math.round(maxinds[i] - diff / 4);
@@ -260,8 +260,14 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   const minDist = Math.round(body.sampleRate / 4.16);
   const heartbeats = segmentHeartbeat(ecgArr, minDist, .7);
 
+  const beatsFound = heartbeats.beats.length > 0;
+  console.log(heartbeats, beatsFound)
+
   // only invoke SageMaker if there are heartbeats
-  const predRes = heartbeats.beats.length === 0 ? new Promise(() => []) : invokeSage(heartbeats.beats);
+  const predRes = beatsFound ? invokeSage(heartbeats.beats) : new Promise((resolve, reject) => {
+    console.log("Not Invoking SageMaker endpoint")
+    resolve([]);
+  });
 
   return Promise.all([emailRes, audRes, ecgRes, predRes]).then(results => {
     const screenResults = results[3];
@@ -282,12 +288,23 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
       Body: JSON.stringify(metadata),
       ContentType: "binary/octet-stream"
     }).promise().then(() => {
-      return {
-        statusCode: 200,
-        headers: {
-        },
-        body: JSON.stringify(screenResults)
+      if (beatsFound) {
+        return {
+          statusCode: 200,
+          headers: {
+          },
+          body: JSON.stringify(screenResults)
+        }
       }
+      else {
+        return {
+          statusCode: 400,
+          headers: {
+          },
+          body: JSON.stringify("No heartbeats found")
+        }
+      }
+
     });
 
   }).catch(err => {
