@@ -125,17 +125,10 @@ function formatArr(arr: number[]) {
  * @param beats array of beats. Each beat is an array of numbers
  * @returns JSON object of the response from SageMaker instance
  */
-async function invokeSage(beats: number[][]) {
-
-  const data = []
-  for (const beat of beats){
-    const formattedBeat = formatArr(beat.slice(0, 186))
-    data.push(formattedBeat)
-  }
-  
+async function invokeSage(beats: number[][], endpoint: string) {
   const params = {
-    Body: JSON.stringify(data),
-    EndpointName: 'pleasework4', 
+    Body: JSON.stringify(beats),
+    EndpointName: endpoint, 
     ContentType: 'application/json',
     Accept: 'application/json',
   }
@@ -148,19 +141,17 @@ async function invokeSage(beats: number[][]) {
 }
 
 async function invokeSageDemo(){
-  const ecgFile = await fs.readFileSync('./../../ml/dataset/archive/mitbih_test.csv');
-
-  // get first line of ecgFile
-  const lines = ecgFile.toString().split('\n')
-
+  // create a 2D array of dead people data
   const beats = []
-  for (let i = 0; i < 10; i++) {
-    // splits into the numbers
-    const line = lines[i].split(',').map(Number)
-    beats.push(line)
+  for (let i = 0; i < 3; i++) {
+    const beat = []
+    for (let j = 0; j < 100; j++) {
+      beat.push(0)
+    }
+    beats.push(formatArr(beat))
   }
 
-  return invokeSage(beats)
+  return invokeSage(beats, "hypertrophy")
 }
 
 const start = Date.now();
@@ -174,8 +165,16 @@ const start = Date.now();
 // });
 
 // he dead!
-DoUploadDemo("./dead.txt").then((res) => {
-  console.log(res.status, res.statusText, res.data);
+// DoUploadDemo("./dead.txt").then((res) => {
+//   console.log(res.status, res.statusText, res.data);
+
+//   const end = Date.now();
+//   console.log(`Time: ${end - start} ms`);
+// });
+
+// test sagemaker
+invokeSageDemo().then((data)=>{
+  console.log(data)
 
   const end = Date.now();
   console.log(`Time: ${end - start} ms`);
