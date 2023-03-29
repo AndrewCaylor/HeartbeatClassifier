@@ -3,32 +3,39 @@ import wave
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-import Adafruit_ADS1x15 as ADC
 import multiprocessing as mp
 
-def recordECG():
-    record_time = 1 #seconds
-    samples = record_time*100 #samples based on 100Hz
-    try:
-        adc = ADC.ADS1015(address=0x49, busnum=1)
-        value = 0 #empty for storing ADC readings
-        curr_time = 0 #to store current time
-        ecg = samples*[0]
-        t = samples*[0]
-        #loop over time period
-        for i in range(samples):
-            value = adc.read_adc(0, gain=1) #0 for analog input A0
-            voltage = value*4/2048
-            ecg[i] = voltage
-            t[i] = curr_time
-            curr_time += 0.01
-            time.sleep(0.01)
+DURATION = 5
+ADC_COEFF = 5/1024
 
-        with open("recordECG.csv", "w") as f:
-            for line in ecg:
-                f.write(str(line) + "\n")
-    except:
-        print("ADC not connected")
+
+def recordECG():
+  # while we sleeping, the ecg is recording
+  time.sleep(DURATION)
+
+  # read from rawECG.txt
+  f = open("./rawECG.txt")
+  data = f.read()
+  f.close()
+
+  # get the lines of the data, reverse the order for convenience
+  lines = data.split("\n")[::-1]
+
+  finalTime = int(lines[1].split(" ")[0])
+  curTime = finalTime
+
+  amplitudes = []
+  ind = 1
+  while finalTime - curTime < DURATION*1000:
+    line = lines[ind].split(" ")
+    curTime = int(line[0])
+    amplitudes.insert(0, str(float(line[1])*ADC_COEFF))
+    ind += 1
+
+  # write to ecg.txt
+  f = open("recordECG.csv", "w")
+  f.write("\n".join(amplitudes))
+  f.close()
 
 #records audio and writes to wav file. returns path to file
 def recordWAV():
@@ -45,7 +52,7 @@ def recordWAV():
         searchStr = "card " + str(i)
         # If we can record from a device, record from the first one we find
         if(searchStr in data):
-            os.system("arecord -Dplughw:" + str(i) + ",0 -f S16_LE --duration=5 -r8000 recordWAV.wav")
+            os.system("arecord -Dplughw:" + str(i) + ",0 -f S16_LE --duration=" + str(DURATION) + " -r8000 recordWAV.wav")
             found = True
             break
     
@@ -152,4 +159,5 @@ def recordBoth():
     ecg.join()
 
 if __name__ == "__main__":
+    # recordBoth won't work due to relative file locations
     recordBoth()
