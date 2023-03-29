@@ -230,7 +230,7 @@ function App() {
             },
             {
               x: [scanX, scanX],
-              y: [Math.min(waveformMin, -1), Math.max(waveformMax, 1)],
+              y: [waveformMin - .2, waveformMax + .2],
               type: 'scatter',
               mode: 'lines',
               marker: { color: 'blue' },
