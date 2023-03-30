@@ -11,8 +11,7 @@ import os.path as Path
 from record import recordBoth, filterWAV
 from upload import encodeCSV, encodeWAV, upload
 import datetime
-import time
-import matplotlib
+import json
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -22,7 +21,30 @@ ECGPATH = "recordECG.csv"
 
 lastState = "none"
 unix_timestamp = 0
+predStr = ""
 
+def formatTable():
+    global predStr
+    print(predStr)
+    results = json.loads(predStr)
+    for result in results:
+        print(result['predictions'])
+
+    outstr = "Num|  N   |  1   |  2   |  3   | \n"
+
+    for beatInd in range(len(results[0]['predictions'])):
+        resultsStr = ""
+        normalAvg = 0
+
+        for condition in results:
+            beatPred = condition['predictions'][beatInd]
+            resultsStr += f'{beatPred[1]:.2f} | '
+            normalAvg += beatPred[0]
+        normalAvg /= len(results)
+        outstr += f'  {beatInd}| {normalAvg:.2f} | {resultsStr}\n'
+
+    return outstr
+    
 
 def gui():
     # UPLOAD VARS (others are defined in upload script)
@@ -40,19 +62,23 @@ def gui():
     defaultFont.configure(size=20)
     defaultFont.configure(family="Helvetica")
 
+    # set default font for all dialogs
+    window.option_add('*Dialog.msg.font', 'Helvetica 20')
+
     window.columnconfigure(0, weight=1)
     window.columnconfigure(1, weight=1)
 
     # ButtonMenu widgets
-    viewPlaybackButton = tk.Button(window, text="View Playback", command = lambda: transitionState("playback"))
-    recordButton = tk.Button(window, text="Record", command = lambda: transitionState("recordmenu"))
+    recordButton = tk.Button(window, text="Record and Interpret", command = lambda: transitionState("recordmenu"))
+    viewPlaybackButton = tk.Button(window, text="View Last Recording", command = lambda: transitionState("playback"))
     settingsButton = tk.Button(window, text="Settings", command = lambda: transitionState("settings"))
-
     exitButton = tk.Button(window, text="Exit", command = lambda: transitionState("menu"))
 
-    #record widgets
+    #Record/Interpret widgets
     def recordAndUpload():
         global unix_timestamp
+        global predStr
+
         recordTextVar.set("Recording...")
         window.update()
         
@@ -67,12 +93,19 @@ def gui():
         wavData = encodeWAV(WAVPATH)
         ecgData = encodeCSV(ECGPATH)
         
-        result = upload(wavData, ecgData, PATIENT_ID, EMAIL, "gokies", unix_timestamp, stethLoc.get(), True)
+        predStr = upload(wavData, ecgData, PATIENT_ID, EMAIL, "gokies", unix_timestamp, stethLoc.get(), True)
+        recordTextVar.set("Done!")
         
-        recordTextVar.set("Results: " + result)
+        transitionState("results")
+        
         window.update()
     
+    def gotoResults():
+        transitionState("results")
+
     doRecordButton = tk.Button(window, text="Start Recording", command = recordAndUpload)
+    viewResultsButton = tk.Button(window, text="View Interpretation", command = gotoResults)
+
     recordTextVar = tk.StringVar(window, "")
     recordStatusLabel = tk.Label(window, textvariable=recordTextVar)
     
@@ -85,6 +118,10 @@ def gui():
     
     sendEmail = tk.StringVar(window, "false")
     sendEmailCheck = tk.Checkbutton(window, text="Send Email", variable=sendEmail,  onvalue="true", offvalue="false")
+
+    #Results widgets
+    resultsVar = tk.StringVar(window, "")
+    resultsLabel = tk.Label(window, textvariable=resultsVar)
 
     #settings widgets
 
@@ -109,7 +146,7 @@ def gui():
         if(Path.isfile(WAVPATH)):
             os.system("aplay " + WAVPATH)
         else:
-            tk.messagebox.showerror("Error", "No recording present, record audio by running the record script")
+            tk.messagebox.showerror("Error", "No recording present!")
     playButton = tk.Button(window, text="Play Audio", command = lambda: playAudio())
 
     ecgGraph = Figure(figsize=(5,4), dpi=100)
@@ -125,12 +162,14 @@ def gui():
         
         doRecordButton.grid_forget()
         recordStatusLabel.grid_forget()
+        viewResultsButton.grid_forget()
         radio1.grid_forget()
         radio2.grid_forget()
         radio3.grid_forget()
         radio4.grid_forget()
         radio5.grid_forget()
 
+        resultsLabel.pack_forget()
         
         patientIDLabel.pack_forget()
         cardiologistEmailLabel.pack_forget()
@@ -161,8 +200,11 @@ def gui():
             viewPlayback()
         elif(state == "recordmenu"):
             recordMenu()
+        elif(state == "results"):
+            viewResults()
         elif(state == "menu" and lastState == "menu"):
-            exit()
+            # exit() won't work because we are running a thread in the background
+            os.abort()
         else:
             menu()
             
@@ -199,14 +241,28 @@ def gui():
             
             exitButton.pack()
 
+    def viewResults():
+        try:
+          resultsVar.set(formatTable())
+        except:
+          global predStr
+          resultsVar.set(predStr)
+        resultsLabel.pack()
+        exitButton.pack()
+
     def recordMenu():
         global unix_timestamp
+        global predStr
         presentDate = datetime.datetime.now()
         unix_timestamp = datetime.datetime.timestamp(presentDate)
                 
         doRecordButton.grid(column=0, row=0)
         recordStatusLabel.grid(column=0, row=1)
-        exitButton.grid(column=0, row=2)
+        if(predStr != ""):
+            viewResultsButton.grid(column=0, row=2)
+            exitButton.grid(column=0, row=3)
+        else:
+            exitButton.grid(column=0, row=2)
 
         radio1.grid(column=1, row=0)
         radio2.grid(column=1, row=1)
@@ -214,7 +270,6 @@ def gui():
         radio4.grid(column=1, row=3)
         radio5.grid(column=1, row=4)
  
-        
     def menu():
         viewPlaybackButton.pack()
         recordButton.pack()
