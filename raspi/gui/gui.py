@@ -8,18 +8,18 @@ import tkinter as tk
 from tkinter import font
 import os
 import os.path as Path
-from record import recordBoth, filterWAV
+from record import recordBoth, filterWAV, recordECG
 from upload import encodeCSV, encodeWAV, upload
 import datetime
 import json
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import time
 
 
 WAVPATH = "recordWAV.wav"
 ECGPATH = "recordECG.csv"
 
-lastState = "none"
 unix_timestamp = 0
 predStr = ""
 
@@ -53,6 +53,9 @@ def gui():
     
     window = tk.Tk()
 
+    lastState = tk.StringVar(window, "none")
+
+
     # create a fullscreen window
     # window.attributes('-fullscreen', True)
     window.title("Heartbeat Analysis Tool")
@@ -69,6 +72,7 @@ def gui():
     window.columnconfigure(1, weight=1)
 
     # ButtonMenu widgets
+    testRecordButton = tk.Button(window, text="Test Record", command = lambda: transitionState("testrecord"))
     recordButton = tk.Button(window, text="Record and Interpret", command = lambda: transitionState("recordmenu"))
     viewPlaybackButton = tk.Button(window, text="View Last Recording", command = lambda: transitionState("playback"))
     settingsButton = tk.Button(window, text="Settings", command = lambda: transitionState("settings"))
@@ -159,6 +163,7 @@ def gui():
         viewPlaybackButton.pack_forget()
         recordButton.pack_forget()
         settingsButton.pack_forget()
+        testRecordButton.pack_forget()
         
         doRecordButton.grid_forget()
         recordStatusLabel.grid_forget()
@@ -180,7 +185,6 @@ def gui():
         playButton.pack_forget()
         ecgFigureCanvas.get_tk_widget().pack_forget()
         
-        
         if(lastState == "recordmenu"):
             exitButton.grid_forget()
         else:
@@ -189,26 +193,34 @@ def gui():
     # create sort of a state machine
     # previous state is irrelevant (for now)
     def transitionState(state):
-        global lastState
+        print("transitioning to " + state)
         #first undraw all buttons/items
-        clear(lastState)
+        clear(lastState.get())
                 
         #then redraw the items for the correct state
         if(state == "settings"):
+            lastState.set(state)
             editSettings()
         elif(state == "playback"):
+            lastState.set(state)
             viewPlayback()
         elif(state == "recordmenu"):
+            lastState.set(state)
             recordMenu()
+        elif(state == "testrecord"):
+            lastState.set(state)
+            viewTestRecordECG()
         elif(state == "results"):
+            lastState.set(state)
             viewResults()
-        elif(state == "menu" and lastState == "menu"):
+        elif(state == "menu" and lastState.get() == "menu"):
             # exit() won't work because we are running a thread in the background
+            print("force exiting")
             os.abort()
         else:
+            lastState.set(state)
             menu()
-            
-        lastState = state
+
 
     def editSettings():
         patientIDLabel.pack()
@@ -241,6 +253,23 @@ def gui():
             
             exitButton.pack()
 
+    def viewTestRecordECG():
+        ecgFigureCanvas.get_tk_widget().pack()
+        exitButton.pack()
+
+        while (lastState.get() == "testrecord"):
+          recordECG(False)
+          with open(ECGPATH) as f:
+              lines = f.readlines()
+
+              lines = [float(x.strip()) for x in lines]
+
+              times = [5*x/len(lines) for x in range(0, len(lines))]
+              ecgGraph.clear()
+              ecgGraph.add_subplot(111).plot(times, lines)
+              ecgFigureCanvas.draw()
+          window.update()
+
     def viewResults():
         try:
           resultsVar.set(formatTable())
@@ -271,6 +300,7 @@ def gui():
         radio5.grid(column=1, row=4)
  
     def menu():
+        testRecordButton.pack()
         viewPlaybackButton.pack()
         recordButton.pack()
         settingsButton.pack()

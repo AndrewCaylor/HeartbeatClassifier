@@ -9,14 +9,20 @@ DURATION = 5
 ADC_COEFF = 5/1024
 
 
-def recordECG():
-  # while we sleeping, the ecg is recording
-  time.sleep(DURATION)
-
+def recordECG(sleep = True):
+  if sleep:
+    # while we sleeping, the ecg is recording
+    time.sleep(DURATION)
   # read from rawECG.txt
-  f = open("./rawECG.txt")
-  data = f.read()
-  f.close()
+
+  data = "\n1\n1\n1"
+
+  try:
+    f1 = open("rawECG.txt", "r")
+    data = f1.read()
+    f1.close()
+  except:
+    print("Error reading rawECG.txt")
 
   # get the lines of the data, reverse the order for convenience
   lines = data.split("\n")[::-1]
@@ -25,17 +31,21 @@ def recordECG():
   curTime = finalTime
 
   amplitudes = []
-  ind = 1
-  while finalTime - curTime < DURATION*1000:
-    line = lines[ind].split(" ")
-    curTime = int(line[0])
-    amplitudes.insert(0, str(float(line[1])*ADC_COEFF))
-    ind += 1
 
+  if(len(lines) < 10):
+    print("No data to record")
+  else:
+    ind = 1
+    while finalTime - curTime < DURATION*1000 and ind < len(lines):
+      line = lines[ind].split(" ")
+      curTime = int(line[0])
+      amplitudes.insert(0, str(float(line[1])*ADC_COEFF))
+      ind += 1
+      
   # write to ecg.txt
-  f = open("recordECG.csv", "w")
-  f.write("\n".join(amplitudes))
-  f.close()
+  f2 = open("recordECG.csv", "w")
+  f2.write("\n".join(amplitudes))
+  f2.close()
 
 #records audio and writes to wav file. returns path to file
 def recordWAV():
