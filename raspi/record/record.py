@@ -15,7 +15,8 @@ def recordECG(sleep = True):
     time.sleep(DURATION)
   # read from rawECG.txt
 
-  data = "\n1\n1\n1"
+  # please forgive my autism
+  data = "1 1\n1 1\n1 1"
 
   try:
     f1 = open("rawECG.txt", "r")

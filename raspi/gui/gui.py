@@ -268,6 +268,8 @@ def gui():
               ecgGraph.clear()
               ecgGraph.add_subplot(111).plot(times, lines)
               ecgFigureCanvas.draw()
+
+          time.sleep(0.03)
           window.update()
 
     def viewResults():

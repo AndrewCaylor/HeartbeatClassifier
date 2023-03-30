@@ -13,6 +13,8 @@ import threading
 def beginRead():
   if os.path.exists("rawECG.txt"):
       os.remove("rawECG.txt")
+  # kill any other processes that are reading from the serial port
+  os.system("sudo pkill -f cat")
   # make sure we have permission to read from the serial port
   os.system("sudo chmod a+rw /dev/ttyACM0")
   # set the baud rate
@@ -20,7 +22,8 @@ def beginRead():
   # start reading from the serial port
   os.system("cat /dev/ttyACM0 >> rawECG.txt")
 # start reading from the serial port
-threading.Thread(target=beginRead).start()
+thread = threading.Thread(target=beginRead)
+thread.start()
 
 from gui import gui
 
