@@ -50,6 +50,13 @@ enum AuscultationPt {
   pulmonic = "pulmonic",
 }
 
+enum SageMakerEndpoint {
+  pleasework4 = "pleasework4",
+  hypertrophy = "hypertrophy",
+  placeholder1 = "placeholder-1",
+  placeholder2 = "placeholder-2",
+}
+
 interface PostParams {
   audio: string;
   ecg: string;
@@ -79,17 +86,17 @@ function formatArr(arr: number[]) {
  * @param beats array of beats. Each beat is an array of numbers
  * @returns JSON object of the response from SageMaker instance
  */
-async function invokeSage(beats: number[][]) {
+async function invokeSage(beats: number[][], endpoint: SageMakerEndpoint) {
 
   const data = []
   for (const beat of beats) {
-    const formattedBeat = formatArr(beat.slice(0, 186))
+    const formattedBeat = formatArr(beat)
     data.push(formattedBeat)
   }
 
   const params = {
     Body: JSON.stringify(data),
-    EndpointName: 'pleasework4',
+    EndpointName: endpoint,
     ContentType: 'application/json',
     Accept: 'application/json',
   }
@@ -195,7 +202,8 @@ function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
     ranges.push(start)
     ranges.push(end)
 
-    beats.push(subSample(normalized.slice(start, end), 186));
+    const resampledBeat = subSample(normalized.slice(start, end), 100);
+    beats.push(resampledBeat);
   }
 
   console.log(beats)
@@ -264,10 +272,18 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   console.log(heartbeats, beatsFound)
 
   // only invoke SageMaker if there are heartbeats
-  const predRes = beatsFound ? invokeSage(heartbeats.beats) : new Promise((resolve, reject) => {
-    console.log("Not Invoking SageMaker endpoint")
+  let predRes = new Promise((resolve, reject) => {
     resolve([]);
   });
+
+  // invoke the SageMaker endpoint for each condition
+  if (beatsFound) {
+    predRes = Promise.all([
+      invokeSage(heartbeats.beats, SageMakerEndpoint.hypertrophy),
+      invokeSage(heartbeats.beats, SageMakerEndpoint.placeholder1),
+      invokeSage(heartbeats.beats, SageMakerEndpoint.placeholder2),
+    ])
+  }
 
   return Promise.all([emailRes, audRes, ecgRes, predRes]).then(results => {
     const screenResults = results[3];
