@@ -5,13 +5,20 @@ if(__name__ == "__main__"):
     sys.path.insert(0,"./../upload")
     
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import font
 import os
 import os.path as Path
 from record import recordBoth, filterWAV
 from upload import encodeCSV, encodeWAV, upload
 import datetime
 import time
+import matplotlib
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+
+WAVPATH = "recordWAV.wav"
+ECGPATH = "recordECG.csv"
 
 lastState = "none"
 unix_timestamp = 0
@@ -25,9 +32,14 @@ def gui():
     window = tk.Tk()
 
     # create a fullscreen window
-    window.attributes('-fullscreen', True)
+    # window.attributes('-fullscreen', True)
     window.title("Heartbeat Analysis Tool")
-    
+
+    # increase widget font sizes
+    defaultFont = font.nametofont("TkDefaultFont")
+    defaultFont.configure(size=20)
+    defaultFont.configure(family="Helvetica")
+
     window.columnconfigure(0, weight=1)
     window.columnconfigure(1, weight=1)
 
@@ -52,8 +64,8 @@ def gui():
         recordTextVar.set("Uploading...")
         window.update()
         
-        wavData = encodeWAV("recordWAV.wav")
-        ecgData = encodeCSV("recordECG.csv")
+        wavData = encodeWAV(WAVPATH)
+        ecgData = encodeCSV(ECGPATH)
         
         result = upload(wavData, ecgData, PATIENT_ID, EMAIL, "gokies", unix_timestamp, stethLoc.get(), True)
         
@@ -94,12 +106,14 @@ def gui():
 
     #playback widgets
     def playAudio():
-        path = "./recording.wav"
-        if(Path.isfile(path)):
-            val = os.system("aplay " + path)
+        if(Path.isfile(WAVPATH)):
+            os.system("aplay " + WAVPATH)
         else:
             tk.messagebox.showerror("Error", "No recording present, record audio by running the record script")
     playButton = tk.Button(window, text="Play Audio", command = lambda: playAudio())
+
+    ecgGraph = Figure(figsize=(5,4), dpi=100)
+    ecgFigureCanvas = FigureCanvasTkAgg(ecgGraph, master=window)
 
     #functions to display info for each state
 
@@ -125,6 +139,7 @@ def gui():
         saveButton.pack_forget()
         
         playButton.pack_forget()
+        ecgFigureCanvas.get_tk_widget().pack_forget()
         
         
         if(lastState == "recordmenu"):
@@ -172,10 +187,18 @@ def gui():
 
     def viewPlayback():
         playButton.pack()
-        
-        exitButton.pack()
+        ecgGraph.clear()
 
-        
+        with open(ECGPATH) as f:
+            lines = f.readlines()
+            lines = [float(x.strip()) for x in lines]
+            times = [5*x/len(lines) for x in range(0, len(lines))]
+
+            ecgGraph.add_subplot(111).plot(times, lines)
+            ecgFigureCanvas.get_tk_widget().pack()
+            
+            exitButton.pack()
+
     def recordMenu():
         global unix_timestamp
         presentDate = datetime.datetime.now()
