@@ -7,7 +7,13 @@ import Stack from '@mui/system/Stack';
 import { Alert, AlertTitle, MenuItem, Select, SelectChangeEvent, Table, TableCell, TableContainer, TableHead, TableRow, TableBody, Paper } from '@mui/material';
 const baseURL = 'https://75xtipvj56.execute-api.us-east-1.amazonaws.com';
 
-function BeatsTable(data: number[][]) {
+interface MLRes{
+  predictions: number[][]
+}
+
+function BeatsTable(data: MLRes[]) {
+
+  console.log("Data", data)
   if (!data?.length) {
     return <Alert severity='error'>
       <AlertTitle>Error: No data found</AlertTitle>
@@ -15,7 +21,21 @@ function BeatsTable(data: number[][]) {
     </Alert>;
   }
 
-  console.log(data)
+  // format the stupid data from the backend into something usable
+  const rows:number[][] = []
+  for (let beat = 0; beat < data[0].predictions.length; beat++) {
+    const row:number[] = [];
+    // the model outputs the probability of each class vs normal
+    // it would be silly to show P(normal) from each class so we just average it from each model
+    let normalavg = 0;
+    for (let i = 0; i < data.length; i++) {
+      row.push(data[i].predictions[beat][1]);
+      normalavg += data[i].predictions[beat][0];
+    }
+    normalavg /= data.length;
+    row.unshift(normalavg);
+    rows.push(row);
+  }
 
   return (
     <TableContainer>
@@ -30,7 +50,7 @@ function BeatsTable(data: number[][]) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.map((row, idx) => (
+          {rows.map((row, idx) => (
             <TableRow
               key={"Beat " + idx}
               sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
@@ -60,7 +80,7 @@ function App() {
   const [waveformMax, setWaveformMax] = useState<number>(0);
   const [waveformMin, setWaveformMin] = useState<number>(0);
   const [location, setLocation] = useState<string>('unknown');
-  const [screenResults, setScreenResults] = useState<number[][]>([[]]);
+  const [screenResults, setScreenResults] = useState<MLRes[]>([]);
 
   const [beatStarts, setBeatStarts] = useState<number[]>([]);
 
@@ -117,7 +137,7 @@ function App() {
     if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
       console.log('development')
       patientID = 'drew';
-      startTime = '1678929332854';
+      startTime = '235463456';
       password = 'gokies';
     }
 
@@ -177,9 +197,9 @@ function App() {
             setBeatStarts([]);
             return;
           }
-          const metadata = metares.value;
-          setScreenResults(JSON.parse(metadata).screenResults.predictions);
-          setBeatStarts(JSON.parse(metadata).beatLocations);
+          const metadata = JSON.parse(metares.value);
+          setScreenResults(metadata.screenResults);
+          setBeatStarts(metadata.beatLocations);
         }
         catch (e) {
           console.log("error parsing metadata: " + e)
@@ -250,7 +270,6 @@ function App() {
       }
     }
   }
-
 
   return (
     <div>
