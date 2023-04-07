@@ -5,6 +5,8 @@ import numpy as np
 from io import BytesIO
 import json
 
+DURATION = 5
+
 # Uploads the ECG signal and the respective audio signal to the cloud for processing
 # Displays the results of the prediction
 def upload(audioData, ecgData, patientID, email, apiKey, sess, stethoscopeLocation = "unknown", sendEmail = False):
@@ -20,7 +22,7 @@ def upload(audioData, ecgData, patientID, email, apiKey, sess, stethoscopeLocati
         "destEmail": email,
         "startTime": str(sess),
         "password": apiKey,
-        "sampleRate": 3000,
+        "sampleRate": len(audioData)/DURATION,
         "stethoscopeLocation": stethoscopeLocation,
         "sendEmail": sendEmail
     }
