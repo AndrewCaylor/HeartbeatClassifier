@@ -10,6 +10,7 @@ DURATION = 5
 # Uploads the ECG signal and the respective audio signal to the cloud for processing
 # Displays the results of the prediction
 def upload(audioData, ecgData, patientID, email, apiKey, sess, stethoscopeLocation = "unknown", sendEmail = False):
+    global DURATION
     #python is stupid and decides to add some characters to the beginning and the end    
     audioB64 = str(base64.b64encode(audioData))[2:-1]
     ecgB64 = str(base64.b64encode(ecgData))[2:-1]
@@ -22,7 +23,7 @@ def upload(audioData, ecgData, patientID, email, apiKey, sess, stethoscopeLocati
         "destEmail": email,
         "startTime": str(sess),
         "password": apiKey,
-        "sampleRate": len(audioData)/DURATION,
+        "sampleRate": len(ecgData)/DURATION,
         "stethoscopeLocation": stethoscopeLocation,
         "sendEmail": sendEmail
     }
