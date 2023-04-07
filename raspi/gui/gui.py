@@ -19,9 +19,11 @@ import time
 
 WAVPATH = "recordWAV.wav"
 ECGPATH = "recordECG.csv"
+DURATION = 5
 
 unix_timestamp = 0
 predStr = ""
+
 
 def formatTable():
     global predStr
@@ -82,6 +84,7 @@ def gui():
     def recordAndUpload():
         global unix_timestamp
         global predStr
+        global DURATION
 
         recordTextVar.set("Recording...")
         window.update()
@@ -95,9 +98,12 @@ def gui():
         window.update()
         
         wavData = encodeWAV(WAVPATH)
-        ecgData = encodeCSV(ECGPATH)
+        # encode CSV creates a buffer, annoying to get the length
+        ecgData, ecgDataLen = encodeCSV(ECGPATH)
+
+        print(ecgDataLen, DURATION)
         
-        predStr = upload(wavData, ecgData, PATIENT_ID, EMAIL, "gokies", unix_timestamp, stethLoc.get(), True)
+        predStr = upload(wavData, ecgData, ecgDataLen/DURATION, PATIENT_ID, EMAIL, "gokies", unix_timestamp, stethLoc.get(), True)
         recordTextVar.set("Done!")
         
         transitionState("results")
