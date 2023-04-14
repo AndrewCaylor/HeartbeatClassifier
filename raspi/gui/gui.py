@@ -27,24 +27,20 @@ predStr = ""
 
 def formatTable():
     global predStr
-    print(predStr)
     results = json.loads(predStr)
-    for result in results:
-        print(result['predictions'])
 
-    outstr = "Num|  N   |  1   |  2   |  3   | \n"
+    cols = [results['ST'], results['CD'], results['H'], results['MI']]
+    rows = zip(*cols)
 
-    for beatInd in range(len(results[0]['predictions'])):
+    outstr = "Num|  ST  |  CD  |  H   |  MI  \n"
+
+    beatInd = 1
+    for row in rows:
         resultsStr = ""
-        normalAvg = 0
-
-        for condition in results:
-            beatPred = condition['predictions'][beatInd]
-            resultsStr += f'{beatPred[1]:.2f} | '
-            normalAvg += beatPred[0]
-        normalAvg /= len(results)
-        outstr += f'  {beatInd}| {normalAvg:.2f} | {resultsStr}\n'
-
+        for pred in row:
+            resultsStr += f'| {pred:.2f}'
+        outstr += f'  {beatInd}| {resultsStr}\n'
+        beatInd += 1
     return outstr
     
 
@@ -56,7 +52,6 @@ def gui():
     window = tk.Tk()
 
     lastState = tk.StringVar(window, "none")
-
 
     # create a fullscreen window
     # window.attributes('-fullscreen', True)
@@ -159,7 +154,7 @@ def gui():
             tk.messagebox.showerror("Error", "No recording present!")
     playButton = tk.Button(window, text="Play Audio", command = lambda: playAudio())
 
-    ecgGraph = Figure(figsize=(5,4), dpi=100)
+    ecgGraph = Figure(figsize=(3,2), dpi=100)
     ecgFigureCanvas = FigureCanvasTkAgg(ecgGraph, master=window)
 
     #functions to display info for each state
