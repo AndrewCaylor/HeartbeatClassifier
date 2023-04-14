@@ -69,6 +69,14 @@ interface PostParams {
   stethoscopeLocation: AuscultationPt;
   sendEmail: boolean;
 }
+
+interface ResultsRes {
+  ST: number[];
+  CD: number[];
+  H: number[];
+  MI: number[];
+}
+
 /**
  * 
  * @param arr array of numbers: 1 row, n col
@@ -116,6 +124,29 @@ function buffToFloat32(buff: Buffer) {
     float32[i] = buff.readFloatLE(i * 4);
   }
   return float32;
+}
+
+
+/**
+ * @param sageRes array of 4 predictions results from SageMaker
+ * @returns cleaned up results
+ */
+function formatSage(sageRes: { predictions: number[][] }[]): ResultsRes {
+  const results = [[],[],[],[]];
+
+  for (let i = 0; i < 4; i++) {
+    results[i] = [];
+    for(let j = 0; j < sageRes[i].predictions.length; j++) {
+      results[i].push(sageRes[i].predictions[j][0]);
+    }
+  }
+
+  return {
+    ST: results[0],
+    CD: results[1],
+    H: results[2],
+    MI: results[3],
+  }
 }
 
 export const handler = async (event: APIGatewayEvent, context: Context): Promise<APIGatewayProxyResult> => {
@@ -175,7 +206,7 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   }
 
   return Promise.all([emailRes, audRes, ecgRes, predRes]).then(results => {
-    const screenResults = results[3];
+    const screenResults = formatSage(results[3] as { predictions: number[][] }[]);
 
     const metadata = {
       patientID: body.patientID,
