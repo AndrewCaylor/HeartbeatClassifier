@@ -206,7 +206,7 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   }
 
   return Promise.all([emailRes, audRes, ecgRes, predRes]).then(results => {
-    const screenResults = formatSage(results[3] as { predictions: number[][] }[]);
+    let screenResults = beatsFound ? formatSage(results[3] as { predictions: number[][] }[]) : [] ;
 
     const metadata = {
       patientID: body.patientID,
