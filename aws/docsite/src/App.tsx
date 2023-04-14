@@ -4,17 +4,18 @@ import Plot from 'react-plotly.js'
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/system/Stack';
-import { Alert, AlertTitle, MenuItem, Select, SelectChangeEvent, Table, TableCell, TableContainer, TableHead, TableRow, TableBody, Paper } from '@mui/material';
+import { Alert, AlertTitle, MenuItem, Select, SelectChangeEvent, Table, TableCell, TableContainer, TableHead, TableRow, TableBody, Paper, FormHelperText } from '@mui/material';
 const baseURL = 'https://75xtipvj56.execute-api.us-east-1.amazonaws.com';
 
-interface MLRes{
-  predictions: number[][]
+interface MLRes {
+  ST: number[],
+  CD: number[],
+  H: number[],
+  MI: number[],
 }
 
-function BeatsTable(data: MLRes[]) {
-
-  console.log("Data", data)
-  if (!data?.length) {
+function BeatsTable(data: MLRes) {
+  if (!(data.ST || data.CD || data.H || data.MI)) {
     return <Alert severity='error'>
       <AlertTitle>Error: No data found</AlertTitle>
       Error Message: No results for this recording
@@ -22,19 +23,12 @@ function BeatsTable(data: MLRes[]) {
   }
 
   // format the stupid data from the backend into something usable
-  const rows:number[][] = []
-  for (let beat = 0; beat < data[0].predictions.length; beat++) {
-    const row:number[] = [];
-    // the model outputs the probability of each class vs normal
-    // it would be silly to show P(normal) from each class so we just average it from each model
-    let normalavg = 0;
-    for (let i = 0; i < data.length; i++) {
-      row.push(data[i].predictions[beat][1]);
-      normalavg += data[i].predictions[beat][0];
-    }
-    normalavg /= data.length;
-    row.unshift(normalavg);
-    rows.push(row);
+  const columns: number[][] = [data.ST, data.CD, data.H, data.MI];
+
+  // convert the columns to rows
+  const rows: number[][] = [];
+  for (let i = 0; i < columns[0].length; i++) {
+    rows.push([columns[0][i], columns[1][i], columns[2][i], columns[3][i]]);
   }
 
   return (
@@ -42,11 +36,11 @@ function BeatsTable(data: MLRes[]) {
       <Table aria-label="simple table">
         <TableHead>
           <TableRow>
-            <TableCell>Beats</TableCell>
-            <TableCell align="right">P(Normal)</TableCell>
-            <TableCell align="right">P(2)</TableCell>
-            <TableCell align="right">P(3)</TableCell>
-            <TableCell align="right">P(4)</TableCell>
+            <TableCell>Beat #</TableCell>
+            <TableCell align="right">ST</TableCell>
+            <TableCell align="right">CD</TableCell>
+            <TableCell align="right">H</TableCell>
+            <TableCell align="right">MI</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -80,7 +74,7 @@ function App() {
   const [waveformMax, setWaveformMax] = useState<number>(0);
   const [waveformMin, setWaveformMin] = useState<number>(0);
   const [location, setLocation] = useState<string>('unknown');
-  const [screenResults, setScreenResults] = useState<MLRes[]>([]);
+  const [screenResults, setScreenResults] = useState<MLRes>({} as MLRes);
 
   const [beatStarts, setBeatStarts] = useState<number[]>([]);
 
@@ -134,6 +128,7 @@ function App() {
     let startTime = params.get('startTime');
     let password = params.get('password');
 
+    // TODO: probably don't give the master password to client device in plaintext lol
     if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
       console.log('development')
       patientID = 'drew';
@@ -193,7 +188,7 @@ function App() {
         // we still want to see the ECG even if the metadata is missing
         try {
           if (metares.status === 'rejected') {
-            setScreenResults([]);
+            setScreenResults({} as MLRes);
             setBeatStarts([]);
             return;
           }
@@ -204,7 +199,7 @@ function App() {
         catch (e) {
           console.log("error parsing metadata: " + e)
           // sometimes the metares will succeed but the JSON.parse will fail
-          setScreenResults([]);
+          setScreenResults({} as MLRes);
           setBeatStarts([]);
         }
       });
@@ -218,8 +213,7 @@ function App() {
   }
 
   function getContent() {
-    console.log(waveformx.length)
-    let end = true
+    let end = true;
 
     const startsList: object[] = beatStarts.map((x) => {
       end = !end
@@ -281,15 +275,18 @@ function App() {
           </Stack>
         </div>
         <Stack direction="row" spacing={2} >
-          <Button variant='contained' onClick={playpause} disabled={!loaded || !!errorMessage}>Play / Pause</Button>
-          <Button variant='contained' onClick={restart} disabled={!loaded || !!errorMessage}>Restart</Button>
-          <Select value={location} disabled={!loaded} onChange={handleChange} label="">
-            <MenuItem value="aortic">Aortic</MenuItem>
-            <MenuItem value="mitral">Mitral</MenuItem>
-            <MenuItem value="tricuspid">Tricuspid</MenuItem>
-            <MenuItem value="pulmonic">Pulmonic</MenuItem>
-            <MenuItem value="unknown">Unknown</MenuItem>
-          </Select>
+          <Button variant='contained' style={{height:"4em"}} onClick={playpause} disabled={!loaded || !!errorMessage}>Play / Pause</Button>
+          <Button variant='contained' style={{height:"4em"}} onClick={restart} disabled={!loaded || !!errorMessage}>Restart</Button>
+          <Stack style={{height:"4em"}}>
+            <Select value={location} style={{height:"4em"}} disabled={!loaded} onChange={handleChange} label="">
+              <MenuItem value="aortic">Aortic</MenuItem>
+              <MenuItem value="mitral">Mitral</MenuItem>
+              <MenuItem value="tricuspid">Tricuspid</MenuItem>
+              <MenuItem value="pulmonic">Pulmonic</MenuItem>
+              <MenuItem value="unknown">Unknown</MenuItem>
+            </Select>
+            <FormHelperText>Stethoscope Location</FormHelperText>
+          </Stack>
 
         </Stack>
       </Stack >
