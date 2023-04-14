@@ -1,6 +1,7 @@
 import * as AWS from 'aws-sdk';
 import { Buffer } from 'buffer';
 import { Context, APIGatewayEvent, APIGatewayProxyResult, } from 'aws-lambda';
+import segmentHeartbeat from './peakseg';
 
 AWS.config.update({ region: 'us-east-1' });
 const s3 = new AWS.S3({ apiVersion: '2006-03-01', region: 'us-east-1' });
@@ -51,10 +52,10 @@ enum AuscultationPt {
 }
 
 enum SageMakerEndpoint {
-  pleasework4 = "pleasework4",
-  hypertrophy = "hypertrophy",
-  placeholder1 = "placeholder-1",
-  placeholder2 = "placeholder-2",
+  STChange = "STChange-final",
+  ConductionDisturbance = "ConductionDisturbance-final",
+  Hypertrophy = "Hypertrophy-final",
+  MyocardialInfarction = "MyocardialInfarction-final",
 }
 
 interface PostParams {
@@ -117,119 +118,6 @@ function buffToFloat32(buff: Buffer) {
   return float32;
 }
 
-function findMaximums(nums: number[], mindist: number, threshpct = 0.7) {
-  let mean = 0;
-
-  for (let i = 0; i < nums.length; i++) {
-    mean += nums[i];
-  }
-  mean /= nums.length;
-
-  // normalize around mean
-  let normalized = nums.map(x => x - mean);
-
-  // flip if more negative
-  if (Math.max(...normalized) < Math.abs(Math.min(...normalized))) {
-    normalized = normalized.map(x => -x);
-  }
-
-  let globalmax = Math.max(...normalized);
-
-  // find peaks in nums that are above thereshold
-  let maxinds = [];
-  for (let i = 1; i < normalized.length - 1; i++) {
-    // check for local max
-    if (normalized[i] > normalized[i - 1] && normalized[i] > normalized[i + 1]) {
-      // check if above threshold
-      if (normalized[i] > globalmax * threshpct) {
-        maxinds.push(i);
-      }
-    }
-  }
-
-  if (maxinds.length > 0) {
-    // sort localmaxinds by size
-    maxinds.sort((a, b) => normalized[b] - normalized[a]);
-
-    // remove peaks that are too close
-    for (let i = 0; i < maxinds.length; i++) {
-      let peakind = maxinds[i];
-      // remove peaks that are too close
-      for (let j = i + 1; j < maxinds.length; j++) {
-        if (Math.abs(maxinds[j] - peakind) < mindist) {
-          maxinds.splice(j, 1);
-          j--;
-        }
-      }
-    }
-
-    maxinds.sort((a, b) => a - b);
-  }
-  else {
-    // no peaks found
-    return [];
-  }
-
-  return maxinds;
-}
-
-/**
- * Segments the ECG values into individual beats, normalizes nums aroud mean before sumsampling
- * 
- * @param nums ECG values 
- * @param mindist minimum distance between peaks
- * @param threshpct threshold to be a peak
- * @returns array of beats
- */
-function segmentHeartbeat(nums: number[], mindist: number, threshpct = 0.7) {
-
-  const maxinds = findMaximums(nums, mindist, threshpct);
-
-  // normalize nums from 0 to 1
-  const min = Math.min(...nums);
-  let normalized = nums.map(x => x - min);
-  const max = Math.max(...normalized);
-  normalized = normalized.map(x => x / max);
-
-  // segment based on beats
-
-  const beats: number[][] = [];
-  const ranges: number[] = [];
-  for (let i = 1; i < maxinds.length - 1; i++) {
-    const diff = maxinds[i + 1] - maxinds[i - 1];
-    const start = Math.round(maxinds[i] - diff / 4);
-    const end = Math.round(maxinds[i] + diff / 4);
-    ranges.push(start)
-    ranges.push(end)
-
-    const resampledBeat = subSample(normalized.slice(start, end), 100);
-    beats.push(resampledBeat);
-  }
-
-  console.log(beats)
-
-  return {
-    beats: beats,
-    ends: ranges
-  };
-}
-
-/**
- * Simple array sub-sampling
- * @param arr input array
- * @param newSize desired size of the new array
- * @returns 
- */
-function subSample(arr: number[], newSize: number): number[] {
-  console.log(arr.length)
-  const newArr = [];
-  const sizeRatio = arr.length / newSize;
-  for (let i = 0; i < newSize; i++) {
-    newArr.push(arr[Math.round(i * sizeRatio)]);
-  }
-  return newArr
-}
-
 export const handler = async (event: APIGatewayEvent, context: Context): Promise<APIGatewayProxyResult> => {
   const bodyBuff = Buffer.from(event.body, 'base64');
   const bodyStr = bodyBuff.toString('utf8');
@@ -279,9 +167,10 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   // invoke the SageMaker endpoint for each condition
   if (beatsFound) {
     predRes = Promise.all([
-      invokeSage(heartbeats.beats, SageMakerEndpoint.hypertrophy),
-      invokeSage(heartbeats.beats, SageMakerEndpoint.placeholder1),
-      invokeSage(heartbeats.beats, SageMakerEndpoint.placeholder2),
+      invokeSage(heartbeats.beats, SageMakerEndpoint.STChange),
+      invokeSage(heartbeats.beats, SageMakerEndpoint.ConductionDisturbance),
+      invokeSage(heartbeats.beats, SageMakerEndpoint.Hypertrophy),
+      invokeSage(heartbeats.beats, SageMakerEndpoint.MyocardialInfarction),
     ])
   }
 
