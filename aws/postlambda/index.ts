@@ -2,47 +2,12 @@ import * as AWS from 'aws-sdk';
 import { Buffer } from 'buffer';
 import { Context, APIGatewayEvent, APIGatewayProxyResult, } from 'aws-lambda';
 import segmentHeartbeat from './peakseg';
+import getEmailParams from './email';
 
 AWS.config.update({ region: 'us-east-1' });
 const s3 = new AWS.S3({ apiVersion: '2006-03-01', region: 'us-east-1' });
 const ses = new AWS.SES({ apiVersion: '2010-12-01' });
-const lambda = new AWS.Lambda({ region: 'us-east-1' });
 const sage = new AWS.SageMakerRuntime();
-
-function getEmailParams(destEmail: string, patientID: string, startTime: string) {
-  const accessLink = createAccessLink(patientID, startTime);
-  const emailParams = {
-    Destination: { /* required */
-      CcAddresses: [],
-      ToAddresses: [
-        destEmail,
-      ]
-    },
-    Message: {
-      Body: {
-        Html: {
-          Charset: "UTF-8",
-          Data: `Access Link: ${accessLink}`
-        },
-        Text: {
-          Charset: "UTF-8",
-          Data: "TEXT_FORMAT_BODY"
-        }
-      },
-      Subject: {
-        Charset: 'UTF-8',
-        Data: `New Heartbeat Recording for patientID: ${patientID}!`
-      }
-    },
-    Source: 'andrewc01@vt.edu',
-  };
-  return emailParams;
-}
-
-function createAccessLink(patientID: string, startTime: string) {
-  const baseURL = "https://75xtipvj56.execute-api.us-east-1.amazonaws.com";
-  return `${baseURL}/index.html?patientID=${patientID}&startTime=${startTime}&password=gokies`;
-}
 
 enum AuscultationPt {
   aortic = "aortic",
@@ -206,7 +171,7 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   }
 
   return Promise.all([emailRes, audRes, ecgRes, predRes]).then(results => {
-    let screenResults = beatsFound ? formatSage(results[3] as { predictions: number[][] }[]) : [] ;
+    const screenResults = beatsFound ? formatSage(results[3] as { predictions: number[][] }[]) : [] ;
 
     const metadata = {
       patientID: body.patientID,
