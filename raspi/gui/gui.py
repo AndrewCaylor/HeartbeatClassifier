@@ -39,7 +39,7 @@ def formatTable():
         resultsStr = ""
         for pred in row:
             resultsStr += f'| {pred:.2f}'
-        outstr += f'  {beatInd}| {resultsStr}\n'
+        outstr += f'  {beatInd}  {resultsStr}\n'
         beatInd += 1
     return outstr
     
