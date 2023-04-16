@@ -54,7 +54,7 @@ def gui():
     lastState = tk.StringVar(window, "none")
 
     # create a fullscreen window
-    # window.attributes('-fullscreen', True)
+    window.attributes('-fullscreen', True)
     window.title("Heartbeat Analysis Tool")
 
     # increase widget font sizes
@@ -73,7 +73,7 @@ def gui():
     recordButton = tk.Button(window, text="Record and Interpret", command = lambda: transitionState("recordmenu"))
     viewPlaybackButton = tk.Button(window, text="View Last Recording", command = lambda: transitionState("playback"))
     settingsButton = tk.Button(window, text="Settings", command = lambda: transitionState("settings"))
-    exitButton = tk.Button(window, text="Exit", command = lambda: transitionState("menu"))
+    exitButton = tk.Button(window, text="    Exit    ", command = lambda: transitionState("menu"))
 
     #Record/Interpret widgets
     def recordAndUpload():
