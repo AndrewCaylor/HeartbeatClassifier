@@ -40,7 +40,9 @@ def recordECG(sleep = True):
     while finalTime - curTime < DURATION*1000 and ind < len(lines):
       line = lines[ind].split(" ")
       curTime = int(line[0])
-      amplitudes.insert(0, str(float(line[1])*ADC_COEFF))
+      # do 1 - x because Braeden made the ECG wrong
+      # TODO: fix this
+      amplitudes.insert(0, str( 1 - float(line[1])*ADC_COEFF ))
       ind += 1
       
   # write to ecg.txt
