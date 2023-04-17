@@ -8,8 +8,9 @@
  * @returns 
  */
 function findMaximums(nums: number[], mindist: number, threshpct = 0.7) {
+  
+  // find the mean of the data
   let mean = 0;
-
   for (let i = 0; i < nums.length; i++) {
     mean += nums[i];
   }
@@ -17,8 +18,6 @@ function findMaximums(nums: number[], mindist: number, threshpct = 0.7) {
 
   // normalize around mean
   let normalized = nums.map(x => x - mean);
-
-
 
   // flip if more negative
   const normmax = Math.max(...normalized);
@@ -40,8 +39,6 @@ function findMaximums(nums: number[], mindist: number, threshpct = 0.7) {
       }
     }
   }
-
-  console.log("possible", maxinds)
 
   if (maxinds.length > 0) {
     // sort localmaxinds by size
@@ -81,9 +78,8 @@ export default function segmentHeartbeat(nums: number[], mindist: number, thresh
 
   const maxinds = findMaximums(nums, mindist, threshpct);
 
-  console.log(maxinds)
-
   // normalize nums from 0 to 1
+
   const min = Math.min(...nums);
   let normalized = nums.map(x => x - min);
   const max = Math.max(...normalized);
@@ -119,7 +115,6 @@ export default function segmentHeartbeat(nums: number[], mindist: number, thresh
  * @returns 
  */
 function subSample(arr: number[], newSize: number): number[] {
-  console.log(arr.length)
   const newArr = [];
   const sizeRatio = arr.length / newSize;
   for (let i = 0; i < newSize; i++) {
