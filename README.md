@@ -4,6 +4,8 @@ The main objective of the system is to collect the heartbeat of a patient, takin
 
 ## The Software Systemm
 
+![Cloud architecture diagram](https://drive.google.com/file/d/1CwP0ZhFd2TWKLUV0-tiYfA_IbtwR7R6Z/view?usp=share_link)
+
 There are four main elements of the software system:  
 1. Arduino
 2. Raspberry Pi
@@ -16,7 +18,8 @@ The Raspberry Pi is mainly responsible for providing a user interface for a medi
 
 The Cloud (we use AWS) provides an HTTP POST RESTful API endpoint for ECG data processing, file storage, ML ECG interpretation. Also provides a HTTP GET RESTful API for data access.
 
-The Website is responsible for providing a user interface for the Cardiologist to view the ECG recordings and the corrosponding ML interpretations.
+The Website is responsible for providing a user interface for the Cardiologist to view the ECG recordings and the corrosponding ML interpretations.   
+![Image of example website](https://drive.google.com/file/d/1PMQAdS9ItqQ5nHIjqkJMG6n2TAkPCvmz/view?usp=share_link)
 
 ## Repo Structure
 ### /arduino
@@ -35,7 +38,13 @@ Probably should be in the /aws directory. The "Lambda Layer" includes the librar
 Here lies some ML things that I worked on. However, the actual code for training these models is on kaggle.
 
 ### /models
-README explaining how to format models correctly for SageMaker
+README explaining how to format models correctly for AWS SageMaker.
 
 ### /raspi
-Code for reading from ECG/Stethoscope and uploading to the cloud
+Code for reading from ECG/Stethoscope and uploading to the cloud.
+
+## Auxiliary Uses
+RickRoll your Cardiologist by sending them this base URL:    
+https://75xtipvj56.execute-api.us-east-1.amazonaws.com/test    
+Add some more url parameters to make it extra convincing:    
+https://75xtipvj56.execute-api.us-east-1.amazonaws.com/test/index.html?patientID=AndrewCaylor&startTime=1681681940&password=cv8YY3fWHvdCPELP    
