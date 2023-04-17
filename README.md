@@ -4,7 +4,7 @@ The main objective of the system is to collect the heartbeat of a patient, takin
 
 ## The Software Systemm
 
-![Cloud architecture diagram](https://drive.google.com/file/d/1CwP0ZhFd2TWKLUV0-tiYfA_IbtwR7R6Z/view?usp=share_link)
+![Cloud architecture diagram](https://lh3.googleusercontent.com/drive-viewer/AAOQEOSrn1egWxgOTAIDwByKLQX1Hl_RtsPvDFaaIJpzqNoQ9WCTUHyDlP2FPSa-sJggHOfZ1zQa0pgJPrx7vtJJKZI1FU3e5Q=s1600)
 
 There are four main elements of the software system:  
 1. Arduino
@@ -19,7 +19,7 @@ The Raspberry Pi is mainly responsible for providing a user interface for a medi
 The Cloud (we use AWS) provides an HTTP POST RESTful API endpoint for ECG data processing, file storage, ML ECG interpretation. Also provides a HTTP GET RESTful API for data access.
 
 The Website is responsible for providing a user interface for the Cardiologist to view the ECG recordings and the corrosponding ML interpretations.   
-![Image of example website](https://drive.google.com/file/d/1PMQAdS9ItqQ5nHIjqkJMG6n2TAkPCvmz/view?usp=share_link)
+![Image of example website](https://lh3.googleusercontent.com/drive-viewer/AAOQEOSPRAwETBNwgHxEyfdpmeIrpduQ6xs-B0IXzD-8O0KpAuShOiUnkPhx9ViBu0or4psDh088jjl0suR5zUGh3IHDGLMY=s1600)
 
 ## Repo Structure
 ### /arduino
