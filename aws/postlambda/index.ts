@@ -121,6 +121,13 @@ export const handler = async (event: APIGatewayEvent, context: Context): Promise
   const audioBuf = Buffer.from(body.audio, 'base64');
   const ecgBuf = Buffer.from(body.ecg, 'base64');
 
+  if(body.password !== "gokies") {
+    return {
+      statusCode: 403,
+      body: "Invalid API key",
+    }
+  }
+
   const ecgFloat32 = buffToFloat32(ecgBuf);
   // join the floats into a string
   const ecgCsv = ecgFloat32.join('\n');
