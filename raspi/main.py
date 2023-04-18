@@ -28,7 +28,8 @@ def beginRead():
   
   # set the baud rate
   # higher baudrates cause rare data corrputions
-  os.system("stty -F /dev/ttyACM0 115200")
+  # but we just have to be resilient to that
+  os.system("stty -F /dev/ttyACM0 460800")
   
   # start reading from the serial port
   os.system("cat /dev/ttyACM0 >> rawECG.txt")
