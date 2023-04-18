@@ -8,14 +8,12 @@ import tkinter as tk
 from tkinter import font
 import os
 import os.path as Path
-from record import recordBoth, filterWAV, recordECG
+from record import recordBoth, recordECG
 from upload import encodeCSV, encodeWAV, upload
 import datetime
 import json
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import time
-
 
 WAVPATH = "recordWAV.wav"
 ECGPATH = "recordECG.csv"
@@ -84,7 +82,6 @@ def gui():
         recordTextVar.set("Recording...")
         window.update()
         
-        filteredPath = "filtered.wav"
         
         recordBoth()
         # successFilter = filterWAV(filteredPath, wavPath)
@@ -259,7 +256,7 @@ def gui():
         exitButton.pack()
 
         while (lastState.get() == "testrecord"):
-          recordECG(False)
+          recordECG()
           with open(ECGPATH) as f:
               lines = f.readlines()
 
@@ -269,8 +266,6 @@ def gui():
               ecgGraph.clear()
               ecgGraph.add_subplot(111).plot(times, lines)
               ecgFigureCanvas.draw()
-
-          time.sleep(0.03)
           window.update()
 
     def viewResults():
