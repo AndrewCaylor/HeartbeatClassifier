@@ -279,13 +279,13 @@ function App() {
           <Button variant='contained' style={{height:"4em"}} onClick={restart} disabled={!loaded || !!errorMessage}>Restart</Button>
           <Stack style={{height:"4em"}}>
             <Select value={location} style={{height:"4em"}} disabled={!loaded} onChange={handleChange} label="">
-              <MenuItem value="aortic">Aortic</MenuItem>
-              <MenuItem value="mitral">Mitral</MenuItem>
-              <MenuItem value="tricuspid">Tricuspid</MenuItem>
-              <MenuItem value="pulmonic">Pulmonic</MenuItem>
+              <MenuItem value="aortic">I</MenuItem>
+              <MenuItem value="mitral">II</MenuItem>
+              <MenuItem value="tricuspid">III</MenuItem>
+              {/* <MenuItem value="pulmonic">Pulmonic</MenuItem> */}
               <MenuItem value="unknown">Unknown</MenuItem>
             </Select>
-            <FormHelperText>Stethoscope Location</FormHelperText>
+            <FormHelperText>Lead Position</FormHelperText>
           </Stack>
 
         </Stack>

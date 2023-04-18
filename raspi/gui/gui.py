@@ -111,10 +111,10 @@ def gui():
     recordTextVar = tk.StringVar(window, "")
     recordStatusLabel = tk.Label(window, textvariable=recordTextVar)
     
-    stethLoc = tk.StringVar(window, "unknown")
-    radio1 = tk.Radiobutton(window, text="Aortic", value="aortic", variable=stethLoc)
-    radio2 = tk.Radiobutton(window, text="Mitrial", value="mitrial", variable=stethLoc)
-    radio3 = tk.Radiobutton(window, text="Tricuspid", value="tricuspid", variable=stethLoc)
+    stethLoc = tk.StringVar(window, "aortic")
+    radio1 = tk.Radiobutton(window, text="I", value="aortic", variable=stethLoc)
+    radio2 = tk.Radiobutton(window, text="II", value="mitrial", variable=stethLoc)
+    radio3 = tk.Radiobutton(window, text="III", value="tricuspid", variable=stethLoc)
     radio4 = tk.Radiobutton(window, text="Pulmonic", value="pulmonic", variable=stethLoc)
     radio5 = tk.Radiobutton(window, text="None", value="unknown", variable=stethLoc)
     
@@ -294,8 +294,8 @@ def gui():
         radio1.grid(column=1, row=0)
         radio2.grid(column=1, row=1)
         radio3.grid(column=1, row=2)
-        radio4.grid(column=1, row=3)
-        radio5.grid(column=1, row=4)
+        # radio4.grid(column=1, row=3)
+        radio5.grid(column=1, row=3)
  
     def menu():
         testRecordButton.pack()
