@@ -17,7 +17,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 WAVPATH = "recordWAV.wav"
 ECGPATH = "recordECG.csv"
-DURATION = 5
+DURATION = 10
 
 unix_timestamp = 0
 predStr = ""
