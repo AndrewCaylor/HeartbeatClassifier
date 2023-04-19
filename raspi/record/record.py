@@ -1,7 +1,7 @@
 import os
 import re
 
-DURATION = 10
+DURATION = 7
 ADC_COEFF = 5/1024
 
 

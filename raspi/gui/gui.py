@@ -17,7 +17,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 WAVPATH = "recordWAV.wav"
 ECGPATH = "recordECG.csv"
-DURATION = 10
+DURATION = 7
 
 unix_timestamp = 0
 predStr = ""
@@ -244,7 +244,7 @@ def gui():
         with open(ECGPATH) as f:
             lines = f.readlines()
             lines = [float(x.strip()) for x in lines]
-            times = [5*x/len(lines) for x in range(0, len(lines))]
+            times = [DURATION*x/len(lines) for x in range(0, len(lines))]
 
             ecgGraph.add_subplot(111).plot(times, lines)
             ecgFigureCanvas.get_tk_widget().pack()
@@ -262,7 +262,7 @@ def gui():
 
               lines = [float(x.strip()) for x in lines]
 
-              times = [5*x/len(lines) for x in range(0, len(lines))]
+              times = [DURATION*x/len(lines) for x in range(0, len(lines))]
               ecgGraph.clear()
               ecgGraph.add_subplot(111).plot(times, lines)
               ecgFigureCanvas.draw()
