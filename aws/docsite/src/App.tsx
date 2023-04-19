@@ -73,7 +73,7 @@ function App() {
   const [playing, setPlaying] = useState(false);
   const [waveformMax, setWaveformMax] = useState<number>(0);
   const [waveformMin, setWaveformMin] = useState<number>(0);
-  const [location, setLocation] = useState<string>('unknown');
+  const [location, setLocation] = useState<string>('aortic');
   const [screenResults, setScreenResults] = useState<MLRes>({} as MLRes);
 
   const [beatStarts, setBeatStarts] = useState<number[]>([]);
