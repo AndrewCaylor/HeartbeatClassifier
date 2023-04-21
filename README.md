@@ -35,7 +35,7 @@ The Website is responsible for providing a user interface for the Cardiologist t
 Probably should be in the /aws directory. The "Lambda Layer" includes the libraries for the AWS Lambda instance to make API calls to other AWS Services.
 
 ### /ml
-Here lies some ML things that I worked on. However, the actual code for training these models is on kaggle.
+Tom's code for training our models.
 
 ### /models
 README explaining how to format models correctly for AWS SageMaker.
